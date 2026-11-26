@@ -104,7 +104,6 @@ models/
 | `battery` | `caps.battery` ✔ | `level`, `charging` bayrakları. |
 | `specs` | — | Yalnız gösterim; Dashboard'daki künye. |
 | `notes` | — | Tek satır uyarı; arayüzde bilgi ikonu olarak görünür. |
-| `source` | ✔ | Bu sürücünün uyarlandığı depo ve lisans. Örn. `{"repo":"paulcoding810/open-aula","license":"none","file":"web/PROTOCOL.md"}`. |
 
 Bilinmeyen üst düzey alan **reddedilir** (yazım hatası sessizce yutulmasın).
 
@@ -331,7 +330,6 @@ cihaz "tanınmıyor" görünür. **Doğrulamadan geçmemiş bildirimle cihaza ya
 | 12 | `dpi.defaults` uzunluğu `stages`'a eşit; `min < max`, `step > 0`. |
 | 13 | `probe.accept` boş değil. |
 | 14 | Aynı `vid:pid:role` taşıyan iki sürücünün `accept` listeleri kesişmez; kesişiyorsa biri `fallback` işaretli olmalı. |
-| 15 | `source.repo` ve `source.license` dolu. |
 
 Doğrulayıcı `core/driver.js` içinde, ~150 satır, bağımlılıksız. Testleri gerçek bildirimleri
 ve bozuk örnekleri (`tests/fixtures/bad-drivers/`) koşar.
@@ -382,7 +380,7 @@ ortak soyutlama yok, kopya kabul.
 
 ## 11. Örnek: F75
 
-`models/keyboards/f75.json`:
+`models/f75/driver.json`:
 
 ```json
 {
@@ -396,7 +394,6 @@ ortak soyutlama yok, kopya kabul.
     { "vid": "3554", "pid": "fa09", "role": "dongle", "usagePage": 65280 }
   ],
   "probe": { "accept": ["0300000000cd", "030000000000e1"] },
-  "source": { "repo": "paulcoding810/open-aula", "license": "none", "file": "web/PROTOCOL.md" },
   "caps": {
     "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
     "macros": true, "settings": true, "battery": true, "readBack": true
