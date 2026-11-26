@@ -19,7 +19,7 @@ Early development. The plan and protocol notes are complete; the application is 
 | Document | Contents |
 | --- | --- |
 | [PLAN.md](PLAN.md) | Scope, architecture, UI, security model, phases, risks |
-| [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md) | Byte-level protocol reference for all 12 families |
+| [docs/SCHEMA.md](docs/SCHEMA.md) | JSON manifest contract — how a model is described |
 | [docs/SUPPORTED.md](docs/SUPPORTED.md) | Model × feature matrix |
 | [docs/HARDWARE-TEST.md](docs/HARDWARE-TEST.md) | Manual verification checklist |
 
@@ -81,5 +81,5 @@ node --test
 ## License
 
 GPL-3.0-or-later. Protocol knowledge in this project was derived from the reverse-engineering
-work of the open-source community — see the source notes at the top of each file in
-`protocols/` and in [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md).
+work of the open-source community — each file in `protocols/` names the repository, the
+licence and the specific source it was adapted from at the top.

@@ -6,7 +6,8 @@ Tek sekmede model tanıma, ışık, tuş atama, makro, DPI, ekran, profil ve pak
 > Resmî AULA ürünü değildir. AULA markası ve ürün adları sahiplerine aittir.
 > Protokol bilgisi geri mühendislikle elde edilmiştir; kullanım riski kullanıcıya aittir.
 
-Protokol detayları ayrı belgede: [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md)
+Protokol bilgisi kaynaktan izlenir: her aile modülünün başında uyarlanabilir kaynak depo ve
+lisans notu bulunur; ayrı bir protokol belgesi tutulmaz.
 
 ---
 
@@ -57,7 +58,7 @@ ait sekmeleri açar. Ayar değişikliği cihazın kendi hafızasına yazılır; 
 Her cihazın özellikleri, yetenekleri, efekt tablosu, tuş yerleşimi ve sınırları tek bir
 **JSON manifest** dosyasında. Uygulama cihazı tanıdıktan sonra arayüzü o dosyaya göre kurar.
 Model başına arayüz kodu yoktur — bu projenin ayırt edici tasarım kararı.
-Şema: [docs/SCHEMA.md](docs/SCHEMA.md) · Protokol baytları: [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md)
+Şema: [docs/SCHEMA.md](docs/SCHEMA.md)
 
 ### Kapsam dışı (bilinçli)
 - **Firmware güncelleme.** Hiçbir kaynakta geri alınabilir güvenli yol yok.
@@ -85,7 +86,7 @@ Model başına arayüz kodu yoktur — bu projenin ayırt edici tasarım kararı
 ## 3. Destek matrisi
 
 Durum: **V** donanımda doğrulanmış · **C** sürücü kodundan çıkarılmış · **?** protokol eksik.
-Ayrıntı ve bayt düzenleri: [PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md)
+Bayt düzenleri `protocols/<aile>.js` dosyalarının başında, kaynak depo ve lisans notuyla birlikte.
 
 ### Klavyeler — 24 model, 6 protokol
 
@@ -185,7 +186,7 @@ AulaBridge/
 ├─ README.md
 ├─ LICENSE
 ├─ docs/
-│  ├─ PROTOCOL-NOTES.md
+│  ├─ SCHEMA.md               manifest sözleşmesi
 │  ├─ SUPPORTED.md            model × yetenek tablosu (otomatik üretilir)
 │  └─ HARDWARE-TEST.md        elle doğrulama kontrol listesi
 ├─ styles/

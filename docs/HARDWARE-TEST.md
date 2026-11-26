@@ -35,7 +35,7 @@ Notes:
 ## Per-family specifics
 
 ### g5kb (F75 family)
-- The six-byte identity must match the table in [PROTOCOL-NOTES.md](PROTOCOL-NOTES.md#1-g5kb--sinowealth-bycombo4-f75-ailesi).
+- The six-byte identity must match `probe.accept` in the model's manifest (`models/keyboards/*.json`).
 - The LED block is read-modify-write: verify that changing brightness alters **exactly one**
   byte at `0x3A + 2i` and leaves everything else intact.
 - Compare the LED block dump before and after: any unexpected changed byte means the

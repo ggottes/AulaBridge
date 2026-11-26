@@ -32,7 +32,7 @@ Sonuç: **var olan bir aileye yeni model eklemek = sadece JSON.** Yeni bir aile 
 1 protokol dosyası + JSON. Uygulamada 24 klavye × 1 manifest, 12 fare × 1 manifest.
 
 Bir modelin JSON'unda protokol kodu yoktur; yalnızca `"family": "g5kb"` yazar. Protokolün
-bayt düzeni [PROTOCOL-NOTES.md](PROTOCOL-NOTES.md)'de, kodu `protocols/g5kb.js`'de.
+bayt düzeni ve kaynak depo notu `protocols/g5kb.js`'in başında.
 
 ---
 
@@ -355,7 +355,7 @@ Cihazın hangi ailede olduğunu belirle. Aile biliniyorsa gerisi veri toplama.
 | `aula04` | open-aula `PROTOCOL.md`, parsiya/f108-pro | ürün adı, ayar byte'ları, efekt listesi |
 | `bytetech` | shizunavn/OpenAula `hub-aulacn-protocol.md` | UUID, tuş yerleşimi, AP/RT sınırları |
 | `evision` | shDavlatbek/aulaar `PROTOCOL.md` | configId, 128-byte blok alanları |
-| … | [PROTOCOL-NOTES.md](PROTOCOL-NOTES.md) §14 | |
+| … | `protocols/<aile>.js` başındaki kaynak notu | aynı ailenin diğer modelleri |
 
 ### 2. Manifest'i yaz
 `models/keyboards/<id>.json`. Var olan bir modeli kopyala, kimlik ve sınırları değiştir.
