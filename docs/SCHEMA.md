@@ -556,9 +556,12 @@ ortak soyutlama yok, kopya kabul.
     { "repo": "livvaa/AulaToolkit", "license": "GPL-3.0", "file": "src/shared/protocols/g5kb.ts" }
   ],
   "sourceMatrix": {
-    "open-aula":       { "lighting": true, "perKey": true, "keymap": true, "macros": true, "battery": true },
-    "AulaSofwareLinux":{ "lighting": true, "perKey": true, "keymap": true, "macros": false, "battery": false },
-    "AulaToolkit":     { "lighting": true, "perKey": true, "keymap": true, "macros": true, "battery": true }
+    "open-aula":        { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
+                          "macros": true, "settings": true, "battery": true, "readBack": true },
+    "AulaSofwareLinux": { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
+                          "macros": false, "settings": true, "battery": false, "readBack": true },
+    "AulaToolkit":      { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
+                          "macros": true, "settings": true, "battery": true, "readBack": true }
   },
   "divergence": [
     { "field": "macros.maxBytes", "sources": ["open-aula:3584", "AulaSofwareLinux:4096"],
