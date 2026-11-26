@@ -42,7 +42,7 @@ klasörüne yazılır.
 models/
 ├─ index.json                  katalog: id → klasör, durum
 ├─ f75/
-│  ├─ driver.json              bildirim (§2–§9) + kaynak listesi (§2a)
+│  ├─ driver.json              bildirim (§2–§9)
 │  ├─ driver.js                o modelin protokolü (§10)
 │  └─ layout.json              tuş yerleşimi (§7)
 ├─ f87/
@@ -104,85 +104,12 @@ models/
 | `battery` | `caps.battery` ✔ | `level`, `charging` bayrakları. |
 | `specs` | — | Yalnız gösterim; Dashboard'daki künye. |
 | `notes` | — | Tek satır uyarı; arayüzde bilgi ikonu olarak görünür. |
-| `source` | ✔ | Bu sürücünün uyarlandığı **kaynaklar**. En az iki: karşılaştırma zorunlu (§8). Örn. `[{"repo":"paulcoding810/open-aula","license":"none","file":"web/PROTOCOL.md"},{"repo":"livvaa/AulaToolkit","license":"GPL-3.0","file":"src/shared/protocols/aula04.ts"}]`. Her kayıtta `repo`, `license`, `file` zorunlu. |
+| `source` | ✔ | Bu sürücünün uyarlandığı depo ve lisans. Örn. `{"repo":"paulcoding810/open-aula","license":"none","file":"web/PROTOCOL.md"}`. |
 
 Bilinmeyen üst düzey alan **reddedilir** (yazım hatası sessizce yutulmasın).
 
 `family` alanı yoktur. Sürücüler arasında paylaşılan bir aile kavramı yok — her model
 kendi `driver.js`'ini taşır.
-
----
-
-## 2a. Kaynak çapraz kontrolü
-
-Her sürücü **en az iki bağımsız kaynak** üzerinden yazılır. Tek kaynağa bağlı kalmak, o
-kaynaktaki bir hatayı doğru sanmak demektir. İki proje aynı cihazı bağımsız olarak çözdüyse,
-ikisinin ayrıştığı yer gerçek bir soru işaretidir.
-
-### Kaynak sayısı
-
-| Durum | Kaynak | `status` tavanı |
-|---|---|---|
-| En az iki, uyuşuyor | 2+ | `verified` olabilir |
-| En az iki, ayrışıyor (aşağıda çözüldü) | 2+ | `verified` olabilir |
-| En az iki, ayrışıyor (çözülmedi) | 2+ | `experimental`, `divergence` alanında not |
-| Yalnız bir kaynak var | 1 | `experimental` — kimse bağımsız doğrulamadı |
-| Kaynak yok | 0 | `exploring` — yazma yok |
-
-`driver.test.js` `source.length >= 2` kuralını `experimental` altında da zorunlu tutmaz ama
-`verified` için tutar. Tek kaynaklı sürücü tanınır, denenebilir, ama "doğrulandı" sayılmaz.
-
-### Ayrışma kaydı
-
-İki kaynak aynı bayt için farklı şey söylüyorsa bu **yazılır**, gizlenmez:
-
-```json
-"divergence": [
-  { "field": "light.modes[7].hw", "sources": ["open-aula:19", "AulaToolkit:20"],
-    "chosen": 19, "reason": "F75 donanımında 19 çalıştı (open-aula testi)" },
-  { "field": "macros.nameMax", "sources": ["open-aula:30", "AulaSofwareLinux:32"],
-    "chosen": 30, "reason": "diğer iki kaynak 30 diyor" }
-]
-```
-
-| Alan | Anlamı |
-|---|---|
-| `field` | `driver.json` içindeki yol. |
-| `sources` | `repo:değer` biçiminde, her kaynağın ne dediği. |
-| `chosen` | Seçilen değer. `field`'daki değerle aynı olmalı (test zorlar). |
-| `reason` | Neden bu. Donanım testi > çoğunluk > yeni tarihli kaynak. |
-
-Ayrışma kaydı olmayan ama kaynakları uyuşmayan bir sürücü `driver.test.js`'te **uyarı**
-üretir. Birden çok modelde aynı ayrışma varsa bu, kaynaklardan birinin sistematik hatasıdır.
-
-### Özellik envanteri (birlik)
-
-Bir modelde bir özellik var, diğerinde yok — bu bilgi de kaydedilir. `caps` yalnız `true`
-olanları taşır; ama "acaba bu modelde de var mıydı" sorusu her sürücüde ayrı yanıtlanır.
-Kaynak karşılaştırma tablosu her sürücüde tutulur:
-
-```json
-"sourceMatrix": {
-  "open-aula":     { "lighting": true, "perKey": true, "keymap": true, "macros": true, "screen": false },
-  "AulaToolkit":   { "lighting": true, "perKey": true, "keymap": true, "macros": true, "screen": true }
-}
-```
-
-Tabloda bir yetenek bir kaynakta `true`, diğerinde `false` ise ve `caps`'te ne yazıldığı
-tartışmalıysa, `divergence`'a da girer. `caps`'teki değer, tablonun **kesişimi değil**:
-kaynakların birinde `true` olması "denenmeli" demektir; `status` bunun doğrulanıp
-doğrulanmadığını söyler.
-
-### Kaynak seçimi
-
-Aynı cihaz için kaynak ararken sıra:
-
-1. **Donanımda test edilmiş** proje (open-aula S75 Pro, FaizAsta F75, AulaToolkit SC900 Pro, OpenAula HERO 68/84, aulaar V9)
-2. **Satıcı kodundan çıkarılmış** proje (parsiya/f108-pro, Dahuum fallback)
-3. **Kaptür/decompile notu** (Salamor L99, marcoslor F87)
-4. **README düzeyinde iddia** (yalnız bilgi kaynağı, kanıt değil)
-
-Bu sıralama `divergence.reason` içinde gerekçe olarak kullanılır.
 
 ---
 
@@ -404,129 +331,48 @@ cihaz "tanınmıyor" görünür. **Doğrulamadan geçmemiş bildirimle cihaza ya
 | 12 | `dpi.defaults` uzunluğu `stages`'a eşit; `min < max`, `step > 0`. |
 | 13 | `probe.accept` boş değil. |
 | 14 | Aynı `vid:pid:role` taşıyan iki sürücünün `accept` listeleri kesişmez; kesişiyorsa biri `fallback` işaretli olmalı. |
-| 15 | `source` bir dizi; her elemanında `repo`, `license`, `file` dolu. |
-| 16 | `status: verified` ise `source.length >= 2`. |
-| 17 | `divergence[].chosen`, `field`'ın gerçek değeriyle aynı. |
-| 18 | Her `caps: true`, `sourceMatrix`'in **en az bir** kaynağında `true`. |
+| 15 | `source.repo` ve `source.license` dolu. |
 
-Doğrulayıcı `core/driver.js` içinde, ~180 satır, bağımlılıksız. Testleri gerçek bildirimleri
+Doğrulayıcı `core/driver.js` içinde, ~150 satır, bağımlılıksız. Testleri gerçek bildirimleri
 ve bozuk örnekleri (`tests/fixtures/bad-drivers/`) koşar.
 
 ---
 
-## 10. Yeni özellik ekleme akışı
+## 10. Yeni model ekleme akışı
 
-Bir kaynakta bu projede olmayan bir özellik bulunduğunda (ör. bir klavyede "tilt" efekti,
-bir farede "motion sync"), sıra **değişmez**:
-
-```
-1. Kaynakları karşılaştır   → aynı özellik başka kaynakta var mı, aynı bayt mı
-2. Şemaya ekle              → yeni bir veri alanı; doğrulama kuralıyla birlikte
-3. Arayüze bağla            → JSON'dan okuyan tek, genel kontrol
-4. Sürücüye yaz             → yalnız o modelin driver.js'inde kodlama
-5. Bildirime yaz            → driver.json'da değer
-6. Test yaz                 → fixture + "alan yoksa görünmez" testi
-```
-
-### 1. Kaynakları karşılaştır
-Özellik tek kaynakta mı görünüyor? İkinci bir kaynakta aynı şeyi ara. Bulunamazsa
-`sourceMatrix`'e `false` yaz, `divergence`'a "yalnız tek kaynakta" notu düş. Özellik
-doğrulanmamış sayılır; `caps`'te `true` yapıp `status`'u `verified`'a çıkarma.
-
-### 2. Şemaya ekle
-Şema **kapalı bir listedir**: bilinmeyen anahtar reddedilir. Bu bilinçli, çünkü her yeni
-anahtar arayüzde bir kontrol, sürücüde bir fonksiyon demek. Yeni özellik eklerken:
-
-- Alanı **veri** olarak tanımla: sayı, liste, bayrak. Koşul veya formül değil.
-- Hangi bölüme gireceğine karar ver: mevcut bölüm (ör. `settings[]`) yeterliyse yeni bölüm açma.
-- Yeni bir `caps` anahtarı gerekiyorsa, o anahtarın açtığı arayüzü de yaz.
-- Doğrulama kuralını aynı commit'te ekle: alan varsa bölüm, bölüm varsa `caps`.
-
-Örnek: bir klavyede "yan ışık parlaklığı" bulundu →
-`light.zones[].brightness` alanı + kural "zone varsa brightness > 0" + `caps.lighting` zaten var.
-
-### 3. Arayüze bağla
-Kontrol **tek kez** yazılır, tüm modeller kullanır. Kural: kontrol, JSON'da alan varsa görünür;
-yoksa görünmez. Model adı geçen `if` yazma.
-
-```js
-// doğru: alan varsa göster
-if (driver.light?.zones?.some(z => z.brightness)) renderZoneBrightness(...);
-
-// yanlış: modele göre özel durum
-if (driver.id === 's75pro') renderZoneBrightness(...);
-```
-
-### 4. Sürücüye yaz
-Yalnız o modelin `driver.js`'inde. Özellik iki modelde de varsa iki sürücüye ayrı yazılır
-(bkz. §14 kural 5: sürücüler birbirine referans vermez).
-
-### 5. Bildirime yaz
-`driver.json`'a değer. Etiket çevirisi gerekiyorsa `i18n` anahtarı, dosyaya gömülü metin değil.
-
-### 6. Test yaz
-İki test zorunlu:
-- **Fixture testi**: sürücü, özelliği kaynaktaki baytlarla aynı kodluyor.
-- **Devamsızlık testi**: alan `driver.json`'dan silinince arayüz o kontrolü göstermiyor,
-  sürücü hata vermiyor. Bu, "JSON'a göre her şey çalışır" güvencesini koruyan tek test.
-
-### Yeni özellik gerçekten yeni bölüm gerektiriyorsa
-Ör. hiç olmayan bir "makro gecikme profili" alanı. Sıra aynı, ama şema sürümü artar:
-`schema: 1` → `2`. Eski bildirimler reddedilir; 36 dosya elle güncellenir (geçiş betiği yok,
-bkz. §13). Bunu yapmadan önce sor: bu alan mevcut bir bölüme sığar mı? Genelde sığar.
-
----
-
-## 11. Yeni model ekleme akışı
-
-### 1. Kaynağı bul — **en az iki**
+### 1. Kaynağı bul
 Kalıcı bir "aile" katmanı yok; ama birçok model aynı firmware ailesinden çıkar, o yüzden
-başlangıç noktası genelde aynı repolardır. Her model için o modelin sürücüsü ayrıca okunur,
-ve **her zaman en az iki bağımsız kaynaktan**.
+başlangıç noktası genelde aynı repolardır. Her model için o modelin sürücüsü ayrıca okunur.
 
-| Benzer model | Birinci kaynak | İkinci kaynak |
+| Benzer model | Bakılacak repo | Ne alınır |
 |---|---|---|
-| F75 türevi | open-aula `PROTOCOL.md` | AulaSofwareLinux `proto.rs` / `KB.ini`, AulaToolkit `g5kb.ts` |
-| S75 Pro türevi | open-aula `PROTOCOL.md` | FaizAsta `max.js`, AulaToolkit `aula04.ts`, parsiya/f108-pro |
-| HERO/WIN HE türevi | shizunavn/OpenAula `hub-aulacn-protocol.md` | FaizAsta `he.js`, FaizAsta `max.js` |
-| V9/X9 türevi | shDavlatbek/aulaar `PROTOCOL.md` | xinzore `protocol.ts` |
+| F75 türevi | open-aula `PROTOCOL.md`, AulaSofwareLinux `KB.ini` | 6-byte parola, tuş/LED sayısı, efekt tablosu |
+| S75 Pro türevi | open-aula `PROTOCOL.md`, parsiya/f108-pro | ürün adı, ayar byte'ları, efekt listesi |
+| HERO/WIN HE türevi | shizunavn/OpenAula `hub-aulacn-protocol.md` | UUID, tuş yerleşimi, AP/RT sınırları |
+| V9/X9 türevi | shDavlatbek/aulaar `PROTOCOL.md` | configId, 128-byte blok alanları |
+| … | modelin `driver.js` başındaki kaynak notu | yakın modellerin klasörleri |
 
-İki kaynak aynı fikri söylüyorsa güven artar. Ayrışıyorsa **`divergence`'a yazılır** (§2a) ve
-donanım testi olmadan "doğrulandı" denmez. Tek kaynak varsa `experimental` tavanı aşılmaz.
-
-### 2. Ayrışmaları çıkar
-Kaynakları yan yana koy ve farkları listele. Her fark için:
-
-- **Bayt düzeyi**: aynı komutun farklı payload'u, farklı checksum, farklı offset
-- **Yetenek düzeyi**: bir kaynakta olan özellik diğerinde yok
-- **Sınır düzeyi**: LED sayısı, matris boyu, makro belleği
-
-Her fark `divergence[]`'a girer (§2a). Uyuşan ama hiçbirinin test etmediği bir alan varsa
-`sourceMatrix`'te `false` kalır.
-
-### 3. Klasörü aç
+### 2. Klasörü aç
 `models/<id>/`. Üç dosya: `driver.json`, `driver.js`, `layout.json`.
 Yakın bir modelin dosyalarını **başlangıç noktası** olarak kopyala, sonra o modelin farklarını
 yaz. Kopyalamak "paylaşmak" değildir: kopyadan sonra iki model bağımsızdır.
 
-### 4. Doğrula
+### 3. Doğrula
 ```bash
 node --test tests/driver.test.js tests/<id>.test.js
 ```
-Şema, çapraz referanslar, `caps` ↔ fonksiyon eşleşmesi, kaynak sayısı ve `divergence`
-tutarlılığı kontrol edilir.
+Şema, çapraz referanslar, `caps` ↔ fonksiyon eşleşmesi ve yerleşim sınırları kontrol edilir.
 
-### 5. Simülatörde dene
+### 4. Simülatörde dene
 `?sim=<id>` ile aç. Arayüz doğru sekmeleri açıyor mu, yanlış alan görünüyor mu?
 
-### 6. Donanımda dene
+### 5. Donanımda dene
 Cihaz takılıysa Log sekmesinde kimlik cevabı `accept` değerlerinden biriyle eşleşiyor mu.
 Eşleşiyorsa ışık → tuş → makro sırasıyla dene, `docs/HARDWARE-TEST.md`'yi işaretle.
-Donanım testi, `divergence`'daki bir seçimi doğrularsa kaydın `reason`'ı güncellenir.
 
-### 7. Durumu yükselt
-Test geçtiyse `status: "verified"` (iki kaynak + donanım). Geçmediyse `experimental` kalır,
-`notes` alanına neyin çalışmadığı yazılır.
+### 6. Durumu yükselt
+Test geçtiyse `status: "verified"`. Geçmediyse `experimental` kalır, `notes` alanına neyin
+çalışmadığı yazılır.
 
 **Ortak katmana dokunulmaz.** Yeni model ne kadar benzerse benzesin, mevcut bir sürücünün
 `driver.js`'i değişmez. Bir hata birden çok modelde varsa her birinde ayrı düzeltilir —
@@ -534,9 +380,9 @@ ortak soyutlama yok, kopya kabul.
 
 ---
 
-## 12. Örnek: F75
+## 11. Örnek: F75
 
-`models/f75/driver.json`:
+`models/keyboards/f75.json`:
 
 ```json
 {
@@ -550,23 +396,7 @@ ortak soyutlama yok, kopya kabul.
     { "vid": "3554", "pid": "fa09", "role": "dongle", "usagePage": 65280 }
   ],
   "probe": { "accept": ["0300000000cd", "030000000000e1"] },
-  "source": [
-    { "repo": "paulcoding810/open-aula", "license": "none", "file": "web/PROTOCOL.md" },
-    { "repo": "yhuikzdtguioaert/AulaSofwareLinux", "license": "MIT", "file": "src/proto.rs" },
-    { "repo": "livvaa/AulaToolkit", "license": "GPL-3.0", "file": "src/shared/protocols/g5kb.ts" }
-  ],
-  "sourceMatrix": {
-    "open-aula":        { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
-                          "macros": true, "settings": true, "battery": true, "readBack": true },
-    "AulaSofwareLinux": { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
-                          "macros": false, "settings": true, "battery": false, "readBack": true },
-    "AulaToolkit":      { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
-                          "macros": true, "settings": true, "battery": true, "readBack": true }
-  },
-  "divergence": [
-    { "field": "macros.maxBytes", "sources": ["open-aula:3584", "AulaSofwareLinux:4096"],
-      "chosen": 3584, "reason": "open-aula F75 donanımında test etti; 3584 ile sınır korunuyor" }
-  ],
+  "source": { "repo": "paulcoding810/open-aula", "license": "none", "file": "web/PROTOCOL.md" },
   "caps": {
     "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
     "macros": true, "settings": true, "battery": true, "readBack": true
@@ -617,11 +447,9 @@ ortak soyutlama yok, kopya kabul.
 
 ---
 
-## 13. Sürümleme
+## 12. Sürümleme
 
 - `schema` artınca eski bildirimler reddedilir; geçiş betiği yazılmaz (az sayıda dosya, elle düzeltilir).
-- `source`, `sourceMatrix` ve `divergence` bilgi alanlarıdır: uygulama davranışını değiştirmez,
-  ama `driver.test.js` ve `tools/diff-sources.js` bunlara bakar.
 - Profiller `driver.json`'un `id`'si + `light.modes[].id` saklar. Firmware değeri (`hw`) değişse
   bile kullanıcı profili çalışmaya devam eder. Bu yüzden `id` alanları **yeniden adlandırılmaz**;
   yeni efekt eklenirse yeni `id` verilir.
@@ -630,7 +458,7 @@ ortak soyutlama yok, kopya kabul.
 
 ---
 
-## 14. Bilinçli sınırlar
+## 13. Bilinçli sınırlar
 
 1. Bildirim **hangi işlemlerin sırasını** tanımlamaz. Yazma dizileri `driver.js`'te.
 2. Bildirim **çerçeve biçimini** tanımlamaz. Farklı model = farklı `driver.js`.
@@ -639,8 +467,3 @@ ortak soyutlama yok, kopya kabul.
    (`caps` + bölümün varlığı). Yerleşim `styles/` + `app/views/` içinde bir kez.
 5. Bildirim **başka bir sürücüye referans vermez**. Her klasör kendi kendine yeterli; bir
    modeli silmek diğerini bozmaz.
-6. `sourceMatrix` **satıcı sürücüsünü listelemez**. Satıcının kendi binary'si bir kaynak değil,
-   doğrulanacak şeydir; kaynak listesine yalnız okunabilir, lisansı belli projeler girer.
-7. `divergence` **tartışmayı kapatmaz**, görünür kılar. Bir alanın iki kaynakta farklı olması
-   ve seçimin gerekçelenmesi, seçimin doğru olduğu anlamına gelmez — yalnızca bilinçli
-   yapıldığı anlamına gelir.

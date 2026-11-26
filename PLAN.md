@@ -97,13 +97,6 @@ Durum: **V** donanımda doğrulanmış · **C** sürücü kodundan çıkarılmı
 Her satır bir sürücü klasörüdür: `models/<id>/`. Bayt düzeni o klasörün `driver.js` başında,
 kaynak depo ve lisans notuyla birlikte.
 
-**Kural: her sürücü en az iki bağımsız kaynaktan yazılır.** Kaynaklar uyuşmuyorsa fark
-`driver.json`'daki `divergence[]` alanına yazılır — hangi alan, hangi kaynak ne diyor, ne
-seçildi, neden. Tek kaynaklı sürücü `verified` olamaz. Ayrıntı: [SCHEMA §2a](docs/SCHEMA.md#2a-kaynak-çapraz-kontrolü).
-
-Aşağıdaki tabloda "Kaynak" sütunu tek isim gösteriyor; uygulamada her sürücüde en az ikisi
-kullanılır (ör. F75 → open-aula + AulaSofwareLinux + AulaToolkit).
-
 ### Klavyeler — 24 sürücü
 
 | Model (`models/…`) | Kaynak | Kablo / dongle | Durum | Öne çıkan |
@@ -309,15 +302,8 @@ birbirinden bağımsız iki dosyadır; birini değiştirmek diğerini etkilemez.
 ### `models/<id>/driver.js`
 
 Yalnızca o modelin protokolü. Saf kodlayıcı/çözücü; I/O yok — `session` gönderir.
-Dosyanın başında kaynak listesi ve lisans notu **zorunlu**:
 
 ```js
-// AULA F75 — BYCOMBO4 520-byte feature reports, report id 6.
-// Sources (cross-checked, see driver.json source[]/divergence[]):
-//   paulcoding810/open-aula   web/PROTOCOL.md §F75, web/protocols/g5kb.js   (no licence stated)
-//   yhuikzdtguioaert/AulaSofwareLinux  src/proto.rs                        (MIT)
-//   livvaa/AulaToolkit        src/shared/protocols/g5kb.ts                 (GPL-3.0)
-
 export const reportId = 6;                       // varsa; bazı sürücülerde aramayla bulunur
 export const identify   = (io) => string | null; // io feature oku/yaz verir; accept ile eşleşir
 export const readLight  = (block) => {...};
@@ -335,22 +321,6 @@ export const parseBattery = (bytes) => number | null;
 - Fonksiyonlar paket üretir, göndermez. Adım listesinde `{wait: 35}` belirteci olabilir.
 - Okuma fonksiyonları bozuk/eksik veride `null` döner; tahmin etmez.
 - `identify` cihazın cevabını döner; `probe.accept` listesiyle `registry` eşleştirir.
-- Başlık yorumu kaynakları ve **ayrışmayı** listeler. Ayrışma `driver.json`'daki
-  `divergence[]` ile aynı olmalı; `driver.test.js` ikisini karşılaştırır.
-
-### `tools/diff-sources.js`
-
-İki kaynak repoyu yan yana okumaya yardım eden betik (Faz 0'da basit hâli):
-
-```
-node tools/diff-sources.js f75
-  → models/f75/driver.json içindeki source[] listesini okur
-  → her kaynak repodaki ilgili dosyayı açar
-  → aynı kavramın (ör. efekt tablosu, kimlik parolası) farklı yazıldığı yerleri listeler
-```
-
-Kod karşılaştırması yapmaz; **veri** karşılaştırır (sabit tablolar, ID'ler, sınırlar).
-Amaç: üç kaynaktan hangisinin ne dediğini tek ekranda görmek, `divergence[]`'ı elle doldurmak.
 
 ### `shared/util.js`
 
@@ -709,8 +679,7 @@ Anahtar grupları: `app.*`, `nav.*`, `dash.*`, `lighting.*`, `keys.*`, `macros.*
 | `f75he.test.js` | 5 komutluk beyaz liste (başka komut üretilemez), kimlik doğrulama |
 | `hero68he.test.js` | 63-byte payload başlığı, `cmd\|0x80`, 56-byte veri, birim dönüşümü (mm → 0.01 mm) |
 | `win68hemax.test.js` | `0x5C` çerçevesi, `CK` formülü, **iki istisna** (`OP<0x80` → CK 0, `OP=0x30` → `frame[63]`), µm birimi |
-| **`driver.test.js`** | **Depodaki tüm sürücüler**: her `driver.json` 18 kurala uyuyor mu, `caps`'teki her yeteneğin karşılığı `driver.js`'te var mı, layout'ta `idx`/`light` sınırları, paylaşılan VID:PID'de tekil `accept`, `verified` için `source.length >= 2`, `divergence[].chosen` gerçek değerle aynı, `driver.js` başlığındaki kaynak listesi `driver.json` ile aynı |
-| `feature.test.js` | Yeni özellik eklendiğinde: alan varsa kontrol görünür, **alan silinince kontrol yok ve sürücü hata vermiyor** (SCHEMA §10.6) |
+| **`driver.test.js`** | **Depodaki tüm sürücüler**: her `driver.json` 14 kurala uyuyor mu, `caps`'teki her yeteneğin karşılığı `driver.js`'te var mı, layout'ta `idx`/`light` sınırları, paylaşılan VID:PID'de tekil `accept` |
 | `registry.test.js` | Paylaşılan VID:PID'lerde aday listesi doğru; her adayın kendi `identify()`'ı sırayla; `fallback` yalnız kimlik okunamayınca; bilinmeyen ID'de boş |
 | `i18n.test.js` | Tüm diller `en.json` ile aynı anahtar kümesinde |
 | `tabs.test.js` | `caps` → beklenen sekme seti; eksik bölüm → sekme yok; `exploring` → tüm yazma kilitli |
@@ -769,22 +738,19 @@ F75 takılıysa Connect → Log'da `06 82 01 00 …` → cevap `03 00 00 00 00 c
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
-| 1.1 | `tools/diff-sources.js`: iki repo aç, veri farklarını listele | F75 için open-aula / AulaSofwareLinux / AulaToolkit efekt tabloları yan yana |
-| 1.2 | `models/f75/`: üç kaynağı karşılaştır, `divergence[]`'ı doldur | Her ayrışan alan gerekçeli; `driver.test.js` kural 17 geçiyor |
-| 1.3 | `models/f75/driver.js`: kimlik, başlık, parçalama, okuma/yazma | Birim testleri fixture ile eşleşiyor |
-| 1.4 | `identify()` → 6-byte parola → `driver.json`'daki `accept` | F75 takılınca yalnız `f75` sürücüsü seçiliyor |
-| 1.5 | LED bloğu read-modify-write; `light.modes[].hw` eşlemesi | Parlaklık 1 artır → yalnız 1 byte değişiyor |
-| 1.6 | Işık sekmesi bildirimden: efektler, renk/hız/yön görünürlüğü | Cihazda efekt değişiyor; `color:false` efektte renk gizli |
-| 1.7 | Per-key: `perKey.leds` kadar LED, fırça, paletler | 3 tuş boya → cihazda görünüyor |
-| 1.8 | Tuş haritası: base + Fn, atama editörü | 1 tuş ata → test et → geri al |
-| 1.9 | Makrolar: kodlayıcı + editör + `macros.maxBytes` sınırı | 3 adımlık makro çalışıyor; dolunca yazma reddediliyor |
-| 1.10 | Ayarlar: `settings[]` → kontrol üretimi | Yeniden bağlanınca kalıcı |
-| 1.11 | Pil sorgusu (`battery.level`) | Yüzde görünüyor |
-| 1.12 | `feature.test.js`: her `settings` alanı için "alan silinince kontrol yok" | Devamsızlık testi geçiyor |
-| 1.13 | **7 modele kopyala**, her birinde kaynakları ayrıca oku ve kimliği değiştir: f75pro, f87, f87pro, f99, f99pro, f108, h108 | 8 model listeleniyor; her sürücüde en az iki kaynak ve doldurulmuş `divergence` |
+| 1.1 | `models/f75/`: kimlik, başlık, parçalama, okuma/yazma | Birim testleri fixture ile eşleşiyor |
+| 1.2 | `identify()` → 6-byte parola → `driver.json`'daki `accept` | F75 takılınca yalnız `f75` sürücüsü seçiliyor |
+| 1.3 | LED bloğu read-modify-write; `light.modes[].hw` eşlemesi | Parlaklık 1 artır → yalnız 1 byte değişiyor |
+| 1.4 | Işık sekmesi bildirimden: efektler, renk/hız/yön görünürlüğü | Cihazda efekt değişiyor; `color:false` efektte renk gizli |
+| 1.5 | Per-key: `perKey.leds` kadar LED, fırça, paletler | 3 tuş boya → cihazda görünüyor |
+| 1.6 | Tuş haritası: base + Fn, atama editörü | 1 tuş ata → test et → geri al |
+| 1.7 | Makrolar: kodlayıcı + editör + `macros.maxBytes` sınırı | 3 adımlık makro çalışıyor; dolunca yazma reddediliyor |
+| 1.8 | Ayarlar: `settings[]` → kontrol üretimi | Yeniden bağlanınca kalıcı |
+| 1.9 | Pil sorgusu (`battery.level`) | Yüzde görünüyor |
+| 1.10 | **Aynı sürücü dosyasını 7 modele kopyala ve kimlik değerini değiştir**: f75pro, f87, f87pro, f99, f99pro, f108, h108 — her biri kendi `probe.accept` ile | 8 model listeleniyor; her biri doğru kimlikle eşleşiyor |
 
-**Çıkış:** En az bir fiziksel F75'te ışık + tuş + makro çalışıyor; `f75` `verified` (üç kaynak),
-diğer 7 sürücü `experimental` — her birinin kendi `source[]` ve `divergence[]`'ı var.
+**Çıkış:** En az bir fiziksel F75'te ışık + tuş + makro çalışıyor; `f75` `verified`,
+diğer 7 sürücü `experimental`. Her model kendi klasöründe, kendi `driver.js`'i ile.
 
 ### Faz 2 — ekranlı klavyeler, tek tek sürücüler
 **Süre:** 7–10 gün · **Bağımlılık:** Faz 1 (bileşenler hazır)
@@ -895,13 +861,10 @@ Aktüasyon birimi her sürücünün bildiriminde (`"unit": "0.01mm"` / `"1um"`),
 | 10 | Firma protokolü değiştirir | Model çalışmaz | Sürüm/firmware alanı gösterilir; "bilinmeyen davranış" raporlanabilir |
 | 11 | Lisans uyumu | Proje yayınlanamaz | Kaynak başına lisans notu; GPL-3 seçildi; satıcı binary'si depoya girmez |
 | 12 | Kapsam şişmesi | Bitmez | Fazlar dondurulmuş; kapsam dışı listesi planda sabit |
-| 13 | Bildirimin programlama diline dönüşmesi | Bakımı imkânsız "config DSL" | `driver.json` saf veri; koşul/döngü/formül yasak (SCHEMA §14). Karmaşık davranış `driver.js`'e |
+| 13 | Bildirimin programlama diline dönüşmesi | Bakımı imkânsız "config DSL" | `driver.json` saf veri; koşul/döngü/formül yasak (SCHEMA §13). Karmaşık davranış `driver.js`'e |
 | 14 | Bildirim hatası yanlış modele yazar | Bozuk ayar | Doğrulama zorunlu, paylaşılan VID:PID'de tekil `accept`, `verified` için fiziksel test (SCHEMA §9) |
 | 15 | 36 sürücü arasında kopyala-türet sürüklenmesi | Bir modelde düzeltilen hata diğerinde kalır; sessiz tutarsızlık | Her model kendi testini taşır; Faz 5'te sürücü karşılaştırma aracı; ortak `shared/util.js` yalnız yardımcı |
 | 16 | 36 sürücü bildiriminin bakımı | Tutarsız model listesi | `driver.test.js` hepsini doğrular; `SUPPORTED.md` katalogdan üretilir |
-| 17 | Tek kaynağa güvenmek | O kaynağın hatası doğru sanılır, cihaza yanlış yazılır | En az iki kaynak (`source.length >= 2`), ayrışma `divergence[]`'a yazılır, tek kaynaklı sürücü `verified` olamaz (SCHEMA §2a) |
-| 18 | Yeni özellik arayüze/model özel `if` olarak sızması | Model eklemek yine kod değişikliği gerektirir; mimari çöker | Kontrol JSON'da alan varsa görünür; `feature.test.js` alan silinince kontrolün kaybolduğunu doğrular (SCHEMA §10.6) |
-| 19 | İki kaynak ayrışıyor, kimse fark etmiyor | Sessiz yanlış seçim | `divergence[]` zorunlu alan; `driver.test.js` `chosen` ile gerçek değeri karşılaştırır; aynı ayrışma çok modelde görünürse kaynak hatasıdır |
 
 ---
 
@@ -936,10 +899,6 @@ Bunlar yanıtlanmadan ilgili faz tamamlanamaz:
   kodu ilgilendirmez; `driver.js`'te bir çerçeve düzeltmesi bildirimi ilgilendirmez.
 - **Bildirime mantık sızmaz.** Koşul, formül, değişken, şablon yok. İhtiyaç doğarsa önce
   şemada yeni bir *veri* alanı olarak düşünülür; olmuyorsa o modelin `driver.js`'i büyür.
-- **Tek kaynak yeterli değil.** Her sürücü en az iki bağımsız kaynaktan yazılır; ayrışma
-  `divergence[]`'a yazılır. Kaynaklar uyuşmuyorsa donanım testi olmadan `verified` yok.
-- **Yeni özellik = şema → arayüz → sürücü → bildirim → test.** Ters sıra yasak. Kontrol
-  modele özel `if` ile değil, JSON'da alan varsa görünür; `feature.test.js` bunu doğrular.
 - **Commit:** tek konu, çalışan durum. `feat(driver):`, `fix(f75):`, `feat(model):`, `docs:`.
 
 ---
