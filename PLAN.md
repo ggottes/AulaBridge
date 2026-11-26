@@ -899,6 +899,13 @@ Bunlar yanıtlanmadan ilgili faz tamamlanamaz:
   kodu ilgilendirmez; `driver.js`'te bir çerçeve düzeltmesi bildirimi ilgilendirmez.
 - **Bildirime mantık sızmaz.** Koşul, formül, değişken, şablon yok. İhtiyaç doğarsa önce
   şemada yeni bir *veri* alanı olarak düşünülür; olmuyorsa o modelin `driver.js`'i büyür.
+- **Tek kaynakla sürücü yazılmaz.** Her model en az iki bağımsız kaynaktan okunur; birinde
+  olan yeteneğin diğerinde olup olmadığına bakılır, ayrışma varsa hangisinin seçildiği ve
+  neden seçildiği `driver.js` başlığındaki kaynak notunda yazılır. **Bu karşılaştırma
+  `driver.json`'a yazılmaz** — orada yalnız cihazın kendi verisi durur.
+- **Yeni özellik sırası:** önce kodda ve arayüzde JSON'dan okuma eklenir, sonra değer
+  `driver.json`'a yazılır. Ters sıra yasak: önce JSON'a alan koyup sonra kodda özel durum
+  yazmak, model eklemeyi yine kod işine çevirir.
 - **Commit:** tek konu, çalışan durum. `feat(driver):`, `fix(f75):`, `feat(model):`, `docs:`.
 
 ---
