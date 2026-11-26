@@ -1,0 +1,13 @@
+# Reference clones used during research — never committed
+.research/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Nothing here is generated, but keep stray files out
+node_modules/
+*.log
+dist/
