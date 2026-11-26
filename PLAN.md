@@ -17,7 +17,7 @@ Protokol detayları ayrı belgede: [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.
 3. [Destek matrisi](#3-destek-matrisi)
 4. [Mimari](#4-mimari)
 5. [Modül sözleşmeleri](#5-modül-sözleşmeleri)
-6. [Model kayıt defteri](#6-model-kayıt-defteri)
+6. [Manifest kataloğu](#6-manifest-kataloğu) → [docs/SCHEMA.md](docs/SCHEMA.md)
 7. [Arayüz](#7-arayüz)
 8. [Tasarım sistemi](#8-tasarım-sistemi)
 9. [Güvenlik modeli](#9-güvenlik-modeli)
@@ -48,9 +48,16 @@ ait sekmeleri açar. Ayar değişikliği cihazın kendi hafızasına yazılır; 
 |---|---|---|
 | Kurulum | Her model için ayrı exe | Yok |
 | Platform | Windows | Chromium masaüstü (Win/mac/Linux) |
-| Model tanıma | Kendi modelini bilir | VID:PID + kimlik sorgusu |
+| Model tanıma | Kendi modelini bilir | VID:PID + kimlik sorgusu (JSON'daki `probe`) |
+| Yeni model ekleme | Yeni exe | Yeni `.json` dosyası — kod değişmez |
 | Günlük/paket görünürlüğü | Yok | Var |
 | Desteklenmeyen model | Yok | "Tanındı, deneysel" etiketiyle açılır |
+
+### Model bilgisi nerede durur
+Her cihazın özellikleri, yetenekleri, efekt tablosu, tuş yerleşimi ve sınırları tek bir
+**JSON manifest** dosyasında. Uygulama cihazı tanıdıktan sonra arayüzü o dosyaya göre kurar.
+Model başına arayüz kodu yoktur — bu projenin ayırt edici tasarım kararı.
+Şema: [docs/SCHEMA.md](docs/SCHEMA.md) · Protokol baytları: [docs/PROTOCOL-NOTES.md](docs/PROTOCOL-NOTES.md)
 
 ### Kapsam dışı (bilinçli)
 - **Firmware güncelleme.** Hiçbir kaynakta geri alınabilir güvenli yol yok.
@@ -210,38 +217,42 @@ AulaBridge/
 │     ├─ modal.js   toast.js        deviceStrip.js  keyPreview.js
 ├─ core/
 │  ├─ transport.js
-│  ├─ registry.js
-│  ├─ identity.js
+│  ├─ manifest.js             JSON şema doğrulama + çapraz referans kontrolü
+│  ├─ registry.js             manifest kataloğu → adaylar → probe → model
 │  ├─ log.js
 │  ├─ persist.js              localStorage, profil içe/dışa aktarma
-│  └─ sim.js                  simülatör sürücüsü
+│  └─ sim.js                  simülatör: manifest'i okur, sahte cevap üretir
 ├─ protocols/
 │  ├─ util.js
 │  ├─ g5kb.js     aula04.js   aa.js     mouse55.js   incott.js
 │  ├─ yxt.js      evision.js  hfd.js    bytetech.js  xsyd.js
 │  ├─ oem1ca5.js  hubmouse.js i8.js
 ├─ models/
-│  ├─ index.js
+│  ├─ index.json              katalog: id → dosya, aile, durum
 │  ├─ keyboards/
-│  │  ├─ f75.js  f75pro.js  f87.js  f87pro.js  f99.js  f99pro.js
-│  │  ├─ f108.js h108.js    f87pro-sonix.js
-│  │  ├─ s75pro.js l99.js   f108pro.js f75max.js f98pro.js s99pro.js s98pro.js f2088.js
-│  │  ├─ f75he.js hero68he.js hero84he.js hero75he.js hero99he.js
-│  │  ├─ win68hemax.js hero68ultra.js mini60he.js win60he.js
-│  │  ├─ ag60.js ag75.js neos75.js
+│  │  ├─ f75.json  f75pro.json  f87.json  f87pro.json  f99.json  f99pro.json
+│  │  ├─ f108.json h108.json    f87pro-sonix.json
+│  │  ├─ s75pro.json l99.json   f108pro.json f75max.json f98pro.json s99pro.json s98pro.json f2088.json
+│  │  ├─ f75he.json hero68he.json hero84he.json hero75he.json hero99he.json
+│  │  ├─ win68hemax.json hero68ultra.json mini60he.json win60he.json
+│  │  ├─ ag60.json ag75.json neos75.json
 │  └─ mice/
-│     ├─ sc620.js sc900.js sc390.js
-│     ├─ v9.js x9.js sc800max.js sc580.js kunlunx5.js
+│     ├─ sc620.json sc900.json sc390.json
+│     ├─ v9.json x9.json sc800max.json sc580.json kunlunx5.json
+├─ layouts/                   tuş yerleşimi; modeller paylaşır
+│  ├─ f75.json f87.json f99.json f108.json
+│  ├─ s75pro.json l99.json f75max.json
+│  └─ hero68.json win68hemax.json …
 ├─ assets/
-│  ├─ layouts/                klavye başına SVG tuş yerleşimi
 │  ├─ devices/                model fotoğrafı (koyu zemin, 3/4 açı)
 │  └─ icons/                  efekt ve işlev ikonları
 ├─ tests/
 │  ├─ g5kb.test.js  aula04.test.js  aa.test.js  mouse55.test.js
 │  ├─ incott.test.js yxt.test.js evision.test.js hfd.test.js
 │  ├─ bytetech.test.js xsyd.test.js
-│  ├─ registry.test.js identity.test.js i18n.test.js
-│  └─ fixtures/               kaynaklardan alınmış gerçek paket baytları
+│  ├─ manifest.test.js        şema + çapraz referans + tüm manifestler
+│  ├─ registry.test.js i18n.test.js
+│  └─ fixtures/               gerçek paket baytları + bozuk manifest örnekleri
 └─ .github/workflows/pages.yml
 ```
 
@@ -324,67 +335,92 @@ on('change' | 'log' | 'error', cb)
 
 ---
 
-## 6. Model kayıt defteri
+## 6. Manifest kataloğu
 
-### Kayıt şeması
+Model bilgisinin tamamı JSON'da. Şema ve kurallar ayrı belgede: **[docs/SCHEMA.md](docs/SCHEMA.md)**
 
-```js
-export default {
-  id: 'f75',
-  name: 'AULA F75',
-  kind: 'keyboard',                      // keyboard | mouse
-  protocol: 'g5kb',
-  usb: [
-    { vendorId: 0x258a, productId: 0x010c, role: 'usb',    usagePage: 0xff00 },
-    { vendorId: 0x3554, productId: 0xfa09, role: 'dongle', usagePage: 0xff00 },
-  ],
-  identity: { bytes: '03 00 00 00 00 cd' },  // protokole göre parola / UUID / ürün adı
-  productMatch: /F75/i,                     // ikincil ipucu, kanıt değil
-  status: 'verified',                       // verified | experimental | exploring
-  caps: { lighting: true, perKey: true, keymap: true, fnLayer: true, macros: true,
-          settings: true, battery: true, readBack: true },
-  layout: F75_KEYS,                         // tuş yerleşimi (x, y, w, h, idx, light, code)
-  light: {
-    modes: [{ id: 1, hw: 1, nameKey: 'effect.fixed', color: true, speed: true, dir: false }],
-    brightnessMax: 9, speedMax: 4,
-  },
-  settings: [
-    { key: 'debounce', type: 'select', default: 1, options: [[1,'1'],[2,'2'],[3,'3'],[4,'4']] },
-  ],
-  specs: [{ key: 'layout', value: '75% · 80 keys' }],
+### Neyin JSON, neyin kod olduğu
+
+| JSON | Kod |
+|---|---|
+| Model listesi, VID:PID, kimlik baytları | Çerçeve, checksum, komut sırası |
+| Yetenekler, efekt tablosu, tuş yerleşimi | Parçalama/birleştirme |
+| Ayar seçenekleri, sınırlar, pil bayrakları | Oku-değiştir-yaz mantığı |
+| DPI kademeleri, yoklama listesi, buton slotları | Arayüz düzeni (tek kez, tüm modeller için) |
+
+**Var olan aileye model eklemek = yalnızca JSON.** Yeni aile = 1 protokol dosyası + JSON.
+
+### Katalog
+
+`models/index.json` — hangi manifest var, hangi ailede:
+
+```json
+{
+  "schema": 1,
+  "models": [
+    { "id": "f75", "file": "keyboards/f75.json", "family": "g5kb", "status": "verified" },
+    { "id": "s75pro", "file": "keyboards/s75pro.json", "family": "aula04", "status": "verified" }
+  ]
 }
 ```
 
-### Çözüm sırası (`identity.js`)
+Uygulama açılışta yalnızca kataloğu indirir. Cihaz bağlanınca o VID:PID'ye uyan manifestleri
+tembel yükler — 36 dosyayı baştan indirmez.
+
+### Çözüm sırası (`registry.js`)
 
 ```
 1. Cihazın tüm HID koleksiyonlarını topla (aynı VID:PID altında birden çok olabilir)
-2. registry: bu VID:PID'ye sahip adayları bul
+2. Katalogdan bu VID:PID'ye uyan manifestleri yükle ve doğrula (§SCHEMA 9)
 3. Aday yoksa            → "tanınmıyor" kartı, hiçbir yazma yok
-4. Aday tekse ve durum V → doğrudan bağlan
-5. Aday birden çoksa     → protokolün kimlik sorgusunu dene:
-      g5kb     → 6-byte parola
-      bytetech → 0x82 UUID
-      evision  → configId (base info byte 7)
-      xsyd/hfd → cihazın kendi VID:PID cevabı
-      aula04   → ürün adı (productMatch regex)
-6. Kimlik çözüldü        → o modele bağlan
-7. Çözülemedi            → SALT OKUNABİLİR mod: sekmeler açılır, yazma düğmeleri kilitli,
-                            "Model doğrulanamadı — yazmak için onay gerekir" şeridi
+4. Aday tekse            → probe çalıştır; strong + eşleşti → bağlan
+5. Aday birden çoksa     → her adayın probe'unu sırayla dene (aile identify fonksiyonu):
+      g5kb     → 6-byte parola          evision  → configId
+      bytetech → 0x82 UUID              hfd/xsyd → cihazın bildirdiği VID:PID
+      aula04   → ürün adı               incott   → kimlik baytları
+6. Kimlik çözüldü        → manifest yüklendi, sekmeler caps'ten üretilir
+7. Çözülemedi            → fallback işaretli manifest varsa SALT OKUNABİLİR aç:
+                            sekmeler görünür, yazma düğmeleri kilitli
+                            Yoksa "tanınmıyor"
 ```
 
 Kimlik okuması **her bağlantıda** yapılır, önbelleğe alınmaz. USB portu değişebilir.
+
+### Manifest'in sürdüğü şeyler
+
+Manifest değişince arayüz değişir; view koduna dokunulmaz:
+
+| Manifest | Arayüzde karşılığı |
+|---|---|
+| `caps.lighting` | Lighting sekmesi açılır |
+| `caps.perKey` | Per-key fırçası görünür |
+| `light.modes[].color` | Renk seçici gösterilir/gizlenir |
+| `light.modes[].dir` | Yön kontrolü |
+| `caps.fnLayer` | Keys'te Fn düğmesi |
+| `caps.macros` | Macros sekmesi + makro bellek göstergesi |
+| `settings[]` | Ayar listesi; tip → kontrol |
+| `caps.dpi` + `mouse.dpi` | Mouse → DPI bloğu, kademe sayısı |
+| `mouse.polling.wired` | Kabloda seçilebilen Hz listesi |
+| `mouse.sensor.lod: []` | LOD kontrolü gizli |
+| `screen.width/height` | Kırpma alanı oranı |
+| `caps.clock` | "Saatı senkronize et" düğmesi |
+| `caps.readBack: false` | "Doğrulandı" rozeti yerine "gönderildi" |
+| `status: experimental` | Sarı şerit |
+| `status: exploring` | Tüm yazma kilitli |
 
 ### Paylaşılan VID:PID'ler (dikkat)
 
 | VID:PID | Ait olduğu modeller |
 |---|---|
-| `0C45:800A` | S75 Pro, L99, F108 Pro, F75 Max, F98 Pro, S98 Pro, S99 Pro, F2088(? ) |
+| `0C45:800A` | S75 Pro, L99, F108 Pro, F75 Max, F98 Pro, S98 Pro, S99 Pro, F2088(?) |
 | `0C45:FEFE` | S75 Pro dongle, F87 Pro dongle, F75 HE dongle |
 | `05AC:024F` | S75 Pro dongle, F108 Pro dongle, F75 Max dongle |
 | `258A:010C` | F75, F75 Pro, F87, F87 Pro, F99, F99 Pro, F108, H108 |
 | `38A6:271x` | F87 Pro sonix varyantları |
 | `38A6:2729` | F75 HE (kablo) |
+
+Aynı VID:PID altındaki her manifest **farklı `accept` değeri** taşımalı; `manifest.test.js`
+bunu zorunlu kılar (bkz. SCHEMA §9 kural 14).
 
 ---
 
@@ -594,9 +630,10 @@ Anahtar grupları: `app.*`, `nav.*`, `dash.*`, `lighting.*`, `keys.*`, `macros.*
 | `hfd.test.js` | 5 komutluk beyaz liste (başka komut üretilemez), kimlik doğrulama |
 | `bytetech.test.js` | 63-byte payload başlığı, `cmd\|0x80`, 56-byte veri, birim dönüşümü (mm → 0.01 mm) |
 | `xsyd.test.js` | `0x5C` çerçevesi, `CK` formülü, **iki istisna** (`OP<0x80` → CK 0, `OP=0x30` → `frame[63]`), µm birimi |
-| `registry.test.js` | paylaşılan VID:PID'lerde aday listesi doğru; bilinmeyen ID'de boş dönüyor |
-| `identity.test.js` | Parola → model eşlemesi; bilinmeyen parola → `null` (salt-okunur) |
+| **`manifest.test.js`** | **Depodaki tüm manifestler**: 14 kural (SCHEMA §9), `index.json` ile çift yönlü eşleşme, layout'ta `idx`/`light` sınırları, paylaşılan VID:PID'de tekil `accept`; bozuk örnekler reddediliyor |
+| `registry.test.js` | Paylaşılan VID:PID'lerde aday listesi doğru; probe sırası; `fallback` yalnız kimlik okunamayınca; bilinmeyen ID'de boş |
 | `i18n.test.js` | Tüm diller `en.json` ile aynı anahtar kümesinde |
+| `tabs.test.js` | `caps` → beklenen sekme seti; eksik bölüm → sekme yok; `exploring` → tüm yazma kilitli |
 
 Fixture'lar kaynaklardaki gerçek kaptür baytlarından gelir; "benim kodum kendini doğrulasın"
 değil, "satıcının paketiyle aynı baytı üretsin" test edilir.
@@ -622,24 +659,29 @@ değil, "satıcının paketiyle aynı baytı üretsin" test edilir.
 
 Her fazın sonunda **çalışan, yayınlanabilir site** var. Süre tahminleri tek geliştirici içindir.
 
-### Faz 0 — İskelet
-**Süre:** 2–3 gün · **Bağımlılık:** yok
+### Faz 0 — İskelet + manifest motoru
+**Süre:** 3–4 gün · **Bağımlılık:** yok
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
 | 0.1 | `index.html`, `styles/`, tema token'ları, açık/koyu | Tema değişiyor, `prefers-color-scheme` çalışıyor |
 | 0.2 | `store.js` + subscribe + localStorage | Yenilemede ui tercihleri korunuyor |
-| 0.3 | Hash router, sekme iskeletleri | 10 sekme gezilebiliyor |
+| 0.3 | Hash router, sekme iskeletleri | Sekmeler gezilebiliyor |
 | 0.4 | `i18n` + `en.json` + `tr.json` | Dil değişiyor, test geçiyor |
-| 0.5 | `transport.js` — istek, aç, feature oku/yaz, zaman aşımı | Simülatörle uçtan uca |
-| 0.6 | `registry.js` + `identity.js` iskeleti | Bilinen ID → adaylar |
-| 0.7 | `sim.js` — sahte cihaz sürücüsü | Donanımsız tüm ekranlar gezilebiliyor, demo hiç yazmıyor |
-| 0.8 | `log.js` + Log sekmesi | Her çağrı hex olarak görünüyor, indirilebiliyor |
-| 0.9 | Dashboard + boş durumlar | "Connect" akışı çalışıyor |
-| 0.10 | `tests/` koşucusu + CI + Pages | `node --test` yeşil, site yayında |
+| 0.5 | **`manifest.js`**: şema + 14 çapraz kural | Geçerli manifestler yükleniyor, `tests/fixtures/bad-manifests/` hepsi reddediliyor |
+| 0.6 | **`models/index.json`** katalog + tembel yükleme | Katalog → manifest → doğrula zinciri çalışıyor |
+| 0.7 | **Sekmelerin manifest'ten üretilmesi** | Aynı sitede iki farklı manifest → iki farklı sekme seti, view koduna dokunmadan |
+| 0.8 | `transport.js` — istek, aç, feature oku/yaz, zaman aşımı | Simülatörle uçtan uca |
+| 0.9 | `registry.js` — aday listesi, probe sırası, salt-okunur yedek | Paylaşılan VID:PID'de doğru manifest |
+| 0.10 | `sim.js` — manifest'i okuyup sahte cihaz üretir | Donanımsız her manifest gezilebiliyor, demo hiç yazmıyor |
+| 0.11 | `log.js` + Log sekmesi | Her çağrı hex olarak görünüyor, indirilebiliyor |
+| 0.12 | Dashboard + boş durumlar | "Connect" akışı çalışıyor |
+| 0.13 | `tests/` koşucusu + CI + Pages | `node --test` yeşil, site yayında |
 
-**Faz 0 çıkışı:** F75 takılıysa Connect → Log'da `06 82 01 00 …` → cevap `03 00 00 00 00 cd`.
-Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
+**Faz 0 çıkışı:** İki örnek manifest (`f75.json`, `sc620.json`) elle yazılır. Tarayıcıda `?sim=f75`
+açıldığında Lighting/Keys/Macros sekmeleri, `?sim=sc620` açıldığında Mouse sekmesi görünür —
+arayüz kodu tek, davranış manifest'ten. F75 takılıysa Connect → Log'da `06 82 01 00 …` →
+cevap `03 00 00 00 00 cd`; katalogdan `f75.json` seçilir.
 
 ### Faz 1 — g5kb (F75 ailesi)
 **Süre:** 5–7 gün · **Bağımlılık:** Faz 0
@@ -647,17 +689,18 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 | # | İş | Kabul ölçütü |
 |---|---|---|
 | 1.1 | `protocols/g5kb.js`: kimlik, başlık, parçalama, `read`/`write` | Birim testleri fixture ile eşleşiyor |
-| 1.2 | Kimlik parolası tablosu (9 model) | Her parola doğru modele çözülüyor |
-| 1.3 | LED bloğu read-modify-write | Parlaklık 1 artır → yalnız 1 byte değişiyor |
-| 1.4 | Işık sekmesi: 18 efekt + parlaklık/hız/renk | Cihazda efekt değişiyor |
-| 1.5 | Per-key: 128 LED haritası, fırça, paletler | 3 tuş boya → cihazda görünüyor |
+| 1.2 | `identify()` → 6-byte parola; `probe.accept` ile eşleşme | Her parola doğru manifest'e çözülüyor |
+| 1.3 | LED bloğu read-modify-write; `light.modes[].hw` eşlemesi | Parlaklık 1 artır → yalnız 1 byte değişiyor |
+| 1.4 | Işık sekmesi manifest'ten: efektler, renk/hız/yön görünürlüğü | Cihazda efekt değişiyor; `color:false` efektte renk gizli |
+| 1.5 | Per-key: `perKey.leds` kadar LED, fırça, paletler | 3 tuş boya → cihazda görünüyor |
 | 1.6 | Tuş haritası: base + Fn, atama editörü | 1 tuş ata → test et → geri al |
-| 1.7 | Makrolar: kodlayıcı + editör + cihaza yazma | 3 adımlık makro çalışıyor |
-| 1.8 | Ayarlar: debounce, uyku, yanıt | Yeniden bağlanınca kalıcı |
-| 1.9 | Pil sorgusu | Yüzde görünüyor |
-| 1.10 | Model dosyaları: F75, F75 Pro, F87, F87 Pro, F99, F99 Pro, F108, H108 | 8 model listeleniyor |
+| 1.7 | Makrolar: kodlayıcı + editör + `macros.maxBytes` sınırı | 3 adımlık makro çalışıyor; dolunca yazma reddediliyor |
+| 1.8 | Ayarlar: `settings[]` → kontrol üretimi | Yeniden bağlanınca kalıcı |
+| 1.9 | Pil sorgusu (`battery.level`) | Yüzde görünüyor |
+| 1.10 | **8 manifest**: F75, F75 Pro, F87, F87 Pro, F99, F99 Pro, F108, H108 + paylaşılan `layouts/*.json` | 8 model listeleniyor; kod değişmedi |
 
 **Çıkış:** En az bir fiziksel F75'te ışık + tuş + makro çalışıyor; diğer 7 model "experimental".
+8 manifestin tamamı **yalnızca JSON** ile eklendi — bu, mimarinin asıl sınavı.
 
 ### Faz 2 — aula04 (S75 Pro ailesi)
 **Süre:** 7–10 gün · **Bağımlılık:** Faz 1 (bileşenler hazır)
@@ -671,12 +714,13 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 | 2.5 | Tuş + Fn, aula04 kodlaması (g5kb'den farklı) | Atama çalışıyor |
 | 2.6 | Makrolar (`count` formülü, `AA55` sonu) | Çalışıyor |
 | 2.7 | Ayarlar + model farkları (L99 byte kayması) | Her modelde doğru byte |
-| 2.8 | Saat senkronu | Cihaz ekranında doğru saat |
-| 2.9 | **Ekran sekmesi**: GIF → kareler → RGB565 → 4096'lık parçalar | S75 Pro'da GIF oynuyor |
-| 2.10 | F75 Max: yaz-only mod, "gönderildi" gösterimi | UI "doğrulandı" demiyor |
-| 2.11 | F98 Pro / S99 Pro / S98 Pro: salt-okunur keşif | Log'da anlamlı cevap var mı not edildi |
+| 2.8 | Saat senkronu (`caps.clock`) | Cihaz ekranında doğru saat |
+| 2.9 | **Ekran sekmesi**: `screen.width/height` manifest'ten → kırpma + GIF → RGB565 → 4096'lık parçalar | S75 Pro'da GIF oynuyor; L99'da 320×480 oranı otomatik |
+| 2.10 | `readBack:false` yolu (F75 Max) | UI "doğrulandı" demiyor |
+| 2.11 | F98 Pro / S99 Pro / S98 Pro: `status:"exploring"`, salt-okunur | Log'da anlamlı cevap var mı not edildi |
+| 2.12 | **5 manifest**: S75 Pro, L99, F108 Pro, F75 Max, F98 Pro (+ S99/S98 taslak) | Yalnız JSON; 5 model, tek protokol dosyası |
 
-**Çıkış:** S75 Pro tam (ekran dahil), L99/F108 Pro experimental, F75 Max yaz-only.
+**Çıkış:** S75 Pro tam (ekran dahil), L99/F108 Pro experimental, F75 Max yaz-only — hepsi JSON farkı.
 
 ### Faz 3 — Fareler
 **Süre:** 6–8 gün · **Bağımlılık:** Faz 0
@@ -686,13 +730,14 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 | 3.1 | `mouse55.js` (SC620) | DPI, yoklama, buton, pil |
 | 3.2 | `incott.js` (SC900 ailesi) | 6 DPI kademesi, 8K yoklama, sensör |
 | 3.3 | `yxt.js` (SC390) | Yoklama + LOD + anahtarlar |
-| 3.4 | `evision.js` (V9/X9) | configId tanıma, 128-byte blok RMW |
+| 3.4 | `evision.js` (V9/X9) | `identify()` → configId → manifest |
 | 3.5 | `hubmouse.js` (SC800 vb.) | Tanıma + pil (kısmi) |
-| 3.6 | Mouse sekmesi: DPI, yoklama, sensör, güç | Tüm farelerde ortak görünüm |
-| 3.7 | Fare görseli + buton slotları | Atama editörü Keys ile ortak |
+| 3.6 | **Mouse sekmesi tamamen manifest'ten**: `mouse.dpi`, `.polling`, `.sensor`, `.power` | Eksik alt anahtar → o kontrol gizli |
+| 3.7 | Buton slotları `mouse.buttons.slots` → fare görseli | `locked` slotlar düzenlenemez |
 | 3.8 | Fare makroları (mouse55, evision) | 1 makro çalışıyor |
+| 3.9 | **8 manifest**: SC620, SC900, SC390, V9, X9, SC800 Max, SC580, KUNLUN X5 | KUNLUN X5 `status:"exploring"` kalır |
 
-**Çıkış:** SC900 Pro ve SC620 fizikselde doğrulandı.
+**Çıkış:** SC900 Pro ve SC620 fizikselde doğrulandı; DPI kademe sayısı manifest'ten geliyor.
 
 ### Faz 4 — HE / manyetik
 **Süre:** 8–12 gün · **Bağımlılık:** Faz 1–2 · **En riskli faz**
@@ -708,9 +753,11 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 | 4.7 | `hfd.js` (F75 HE) — beyaz liste | Yalnız 5 komut; okuma çalışıyor |
 | 4.8 | `oem1ca5.js` (HERO 68 ULTRA/PRO) | Tanıma |
 | 4.9 | SOCD / DKS / Mod Tap editörü (bytetech) | Bir senaryo uçtan uca |
-| 4.10 | AG60/AG75/NEOS/MINI/WIN60 kimlik teyidi | BYTETECH'e bağlandı veya "desteklenmiyor" |
+| 4.10 | AG60/AG75/NEOS/MINI/WIN60 kimlik teyidi | bytetech manifesti ile tanındı veya `exploring` |
+| 4.11 | **6 manifest**: F75 HE, HERO 68/84/75/99 HE, WIN 68 HE MAX | `hall` bölümü manifest'ten (birim: 0.01 mm / µm) |
 
 **Çıkış:** HERO 68/84 ve WIN 68 HE MAX doğrulandı; F75 HE experimental.
+Aktüasyon birimi manifest'te (`"unit": "0.01mm"`), kodda sabit değil.
 
 ### Faz 5 — Derinlik
 **Süre:** 5–8 gün
@@ -720,19 +767,22 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 - Pil geçmişi (oturum içi, kalıcı değil).
 - Ritim/müzik senkronu — yalnız `aula04` `0x20` canlı per-key'e sahip modeller.
 - Tanılama paketi: log + ortam + model, cihaz verisi içermez.
+- **Topluluk manifestleri**: kullanıcı kendi JSON'unu yükleyip dener (yerel, doğrulanmış,
+  `status:"user"` etiketiyle, paylaşılamaz). Yeni model eklemenin kod gerektirmediğini kanıtlar.
 
 ### Faz 6 — Cila ve yayın
 **Süre:** 3–5 gün
 
 - Erişilebilirlik denetimi (klavye, kontrast, ekran okuyucu).
 - Linux udev sayfası: hazır kuralı kopyalat, "nasıl uygulanır" adımları.
-- README + ekran görüntüleri + `docs/SUPPORTED.md` otomatik üretimi.
-- GitHub Pages, ilk etiket (`v0.1.0`), katkı rehberi.
+- README + ekran görüntüleri + **`docs/SUPPORTED.md` manifest kataloğundan üretilir**
+  (`node tools/gen-support.js` → tablo, elle yazılmaz).
+- GitHub Pages, ilk etiket (`v0.1.0`), katkı rehberi (nasıl manifest yazılır → SCHEMA.md).
 
 ### Toplam
 | Faz | Süre |
 |---|---|
-| 0 | 2–3 gün |
+| 0 | 3–4 gün |
 | 1 | 5–7 gün |
 | 2 | 7–10 gün |
 | 3 | 6–8 gün |
@@ -759,6 +809,9 @@ Bu görüldüğü an iskeletin doğru olduğu kanıtlanmış olur.
 | 10 | Firma protokolü değiştirir | Model çalışmaz | Sürüm/firmware alanı gösterilir; "bilinmeyen davranış" raporlanabilir |
 | 11 | Lisans uyumu | Proje yayınlanamaz | Kaynak başına lisans notu; GPL-3 seçildi; satıcı binary'si depoya girmez |
 | 12 | Kapsam şişmesi | Bitmez | Fazlar dondurulmuş; kapsam dışı listesi planda sabit |
+| 13 | JSON'un programlama diline dönüşmesi | Bakımı imkânsız "config DSL" | Manifest saf veri; koşul/döngü/formül yasak (SCHEMA §13). Karmaşık davranış koda, koda 1 kez |
+| 14 | Manifest hatası yanlış modele yazar | Bozuk ayar | Doğrulama zorunlu, `verified` için `probe.strong`, paylaşılan VID:PID'de tekil `accept` (SCHEMA §9) |
+| 15 | 36 manifestin bakımı | Tutarsız model listesi | `manifest.test.js` hepsini doğrular; `SUPPORTED.md` katalogdan üretilir |
 
 ---
 
@@ -787,11 +840,23 @@ Bunlar yanıtlanmadan ilgili faz tamamlanamaz:
 - **Bilinmeyen byte korunur.** "Şimdilik sıfırlayalım" yasak.
 - **Hata mesajı kullanıcı dilinde**, eylem içerir.
 - **Türkçe açıklama, İngilizce kod.** Tanımlayıcılar ve yorumlar İngilizce; README/PLAN Türkçe.
-- **Commit:** tek konu, çalışan durum. `feat(protocol):`, `fix(g5kb):`, `docs:`.
+- **Manifest değişikliği kod değişikliği değildir.** Yeni model PR'ı yalnızca `.json` + layout içerir.
+- **Manifest'e mantık sızmaz.** Koşul, formül, değişken, şablon yok. İhtiyaç doğarsa önce
+  şemada yeni bir *veri* alanı olarak düşünülür; olmuyorsa aile kodu büyür (bir kez, tüm modeller için).
+- **Commit:** tek konu, çalışan durum. `feat(protocol):`, `fix(g5kb):`, `feat(model):`, `docs:`.
 
 ---
 
 ## 16. İlk adım
 
-Faz 0.1–0.4. Kabuk, tema, router, i18n. Sonra 0.5–0.7: transport + simülatör.
-F75 takılıysa 0.6'da kimlik okuması `03 00 00 00 00 cd` döndüğü an temel doğrulanmış olur.
+Faz 0.1–0.7 sırayla:
+
+1. Kabuk, tema token'ları, router, i18n (0.1–0.4).
+2. **`core/manifest.js` doğrulayıcı** + `tests/manifest.test.js` (0.5) — 14 kural, bozuk örnek fixture'ları.
+3. **`models/index.json`** + iki örnek manifest: `f75.json` (klavye) ve `sc620.json` (fare) (0.6).
+4. **Sekmelerin manifest'ten üretilmesi** (0.7) — `?sim=f75` ile Lighting/Keys/Macros,
+   `?sim=sc620` ile Mouse. Aynı view kodu, iki farklı arayüz.
+
+0.7 bittiğinde mimarinin asıl iddiası kanıtlanmış olur: **model davranışı JSON'da, arayüz tek**.
+Ondan sonra transport (0.8), registry (0.9), simülatör (0.10), log (0.11), dashboard (0.12).
+F75 takılıysa 0.9'da kimlik okuması `03 00 00 00 00 cd` döndüğü an temel doğrulanmış olur.
