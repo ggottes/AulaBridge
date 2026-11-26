@@ -1,11 +1,12 @@
-# Manifest Şeması
+# Sürücü Bildirimi Şeması
 
-Bir cihazın **ne olduğunu ve ne yapabildiğini** tanımlayan JSON. Uygulama açılışta bu dosyaları
-okur, cihaz bağlanınca kimliği eşleştirir ve arayüzü **tamamen bu dosyadan** üretir.
-Model başına UI kodu yoktur.
+Her model kendi sürücüsüdür: `models/<id>/` klasöründe bir bildirim (`driver.json`), bir kod
+dosyası (`driver.js`) ve bir tuş yerleşimi (`layout.json`). AULA her model için ayrı sürücü
+yayınlıyor; bu proje de öyle yapıyor. Ortak bir "aile" katmanı yoktur — iki model aynı firmware
+ailesinden gelse bile iki ayrı klasörde, iki ayrı `driver.js` ile durur.
 
-Bu belge manifest'in sözleşmesidir: hangi alan zorunlu, hangi değerler geçerli, hangi bilgi
-JSON'a girer, hangisi koda kalır.
+Bu belge `driver.json`'un sözleşmesidir: hangi alan zorunlu, hangi değerler geçerli, hangi bilgi
+bildirime girer, hangisi `driver.js`'e kalır.
 
 ---
 
@@ -14,25 +15,24 @@ JSON'a girer, hangisi koda kalır.
 İstek şuydu: protokoller dahil her şey JSON'da olsun. O yola tam girilirse JSON bir programlama
 diline dönüşür — kendi değişkenleri, koşulları, döngüleri olan kötü bir dil. Bakımı imkânsızlaşır.
 
-Doğru bölünme:
+Doğru bölünme, **model başına**:
 
 | Bilgi türü | Nerede | Neden |
 |---|---|---|
-| Model listesi, VID:PID, kimlik baytları | **JSON** | Veri. Model eklemek için kod değişmez. |
-| Yetenekler (ışık var mı, ekran kaç piksel) | **JSON** | Veri + UI'yı sürer. |
-| Efekt tablosu (isim, firmware değeri, hangi alanlar aktif) | **JSON** | Donanımın tablosu, mantık değil. |
-| Tuş yerleşimi (x, y, w, h, matris indeksi, LED indeksi) | **JSON** | Veri. |
-| Ayar tanımları (debounce seçenekleri, uyku süreleri) | **JSON** | Veri. |
-| Sınırlar (matris boyu, LED sayısı, makro belleği) | **JSON** | Veri. |
-| Çerçeve biçimi, checksum, komut sırası, parçalama | **Kod** | Algoritma. Her aile için 1 dosya. |
-| Okuma-yazma-değiştirme mantığı, hata yönetimi | **Kod** | Algoritma. Aile başına 1 kez. |
+| VID:PID, kimlik baytları | **`driver.json`** | Veri. Modelin kendi USB kimliği. |
+| Yetenekler (ışık var mı, ekran kaç piksel) | **`driver.json`** | Veri + UI'yı sürer. |
+| Efekt tablosu (isim, firmware değeri, hangi alanlar aktif) | **`driver.json`** | Donanımın tablosu, mantık değil. |
+| Tuş yerleşimi (x, y, w, h, matris indeksi, LED indeksi) | **`layout.json`** | Veri. |
+| Ayar tanımları (debounce seçenekleri, uyku süreleri) | **`driver.json`** | Veri. |
+| Sınırlar (matris boyu, LED sayısı, makro belleği) | **`driver.json`** | Veri. |
+| Çerçeve biçimi, checksum, komut sırası, parçalama | **`driver.js`** | Algoritma. O modelin protokolü. |
+| Kimlik sorgusu | **`driver.js`** | Algoritma; beklenen cevap `driver.json`'da `probe.accept`. |
+| Okuma-yazma-değiştirme mantığı, hata yönetimi | **`driver.js`** | Algoritma. |
 | Arayüz düzeni | **Kod** (tek, genel) | Bir kez yazılır, tüm modeller kullanır. |
 
-Sonuç: **var olan bir aileye yeni model eklemek = sadece JSON.** Yeni bir aile eklemek =
-1 protokol dosyası + JSON. Uygulamada 24 klavye × 1 manifest, 12 fare × 1 manifest.
-
-Bir modelin JSON'unda protokol kodu yoktur; yalnızca `"family": "g5kb"` yazar. Protokolün
-bayt düzeni ve kaynak depo notu `protocols/g5kb.js`'in başında.
+Sonuç: **yeni model = yeni klasör.** `driver.json` + `driver.js` + `layout.json` + test.
+Var olan bir sürücüyü başka modele "uyarlamak" yoktur; kaynak repo okunur, kod o modelin
+klasörüne yazılır.
 
 ---
 
@@ -40,21 +40,25 @@ bayt düzeni ve kaynak depo notu `protocols/g5kb.js`'in başında.
 
 ```
 models/
-├─ index.json                  katalog: hangi manifest var, hangi ailede
-├─ keyboards/
-│  ├─ f75.json  f75pro.json  f87.json  ...
-└─ mice/
-   ├─ sc620.json  sc900.json  ...
-layouts/
-├─ f75.json                    tuş yerleşimi (birden çok model paylaşabilir)
-└─ s75pro.json
+├─ index.json                  katalog: id → klasör, durum
+├─ f75/
+│  ├─ driver.json              bildirim (§2–§9)
+│  ├─ driver.js                o modelin protokolü (§10)
+│  └─ layout.json              tuş yerleşimi (§7)
+├─ f87/
+│  ├─ driver.json
+│  ├─ driver.js
+│  └─ layout.json
+├─ s75pro/  l99/  sc620/  …    her model aynı üçlü
 ```
 
-- Manifest yolu `models/index.json`'dan gelir; uygulama hepsini birden indirmez, cihaz
-  bağlanınca aday manifestleri indirir.
-- Yerleşim dosyaları paylaşılır: F75 ve F75 Pro aynı `layouts/f75.json`'u kullanır.
-- Her dosya aynı origin'den gelir. Uzak URL'den manifest yüklenmez (`assets/`, `layouts/`
-  dışına çıkan yol reddedilir).
+- Klasör yolu `models/index.json`'dan gelir; uygulama hepsini birden indirmez, cihaz
+  bağlanınca aday sürücüleri indirir.
+- Yerleşim **paylaşılmaz**: F75 ile F75 Pro'nun tuş haritaları ayrı dosyalardır, ayrı ayrı
+  değiştirilebilir. İki modelin yerleşimi aynıysa iki dosyaya aynı içerik yazılır — bu bir
+  sorun değil, kopyadır.
+- Her dosya aynı origin'den gelir. Uzak URL'den bildirim yüklenmez (`models/` dışına çıkan
+  yol reddedilir).
 
 ---
 
@@ -65,15 +69,14 @@ layouts/
   "schema": 1,
   "id": "f75",
   "name": "AULA F75",
-  "family": "g5kb",
   "kind": "keyboard",
   "status": "verified",
   "usb": [ /* aşağıda */ ],
   "probe": { /* aşağıda */ },
   "caps": { /* aşağıda */ },
-  "layout": "layouts/f75.json",
+  "layout": "layout.json",
   "matrix": { "len": 128 },
-  "light": { /* §4 */ },
+  "light": { /* §5 */ },
   "perKey": { "leds": 90 },
   "macros": { "maxBytes": 3584, "nameMax": 30, "playModes": ["repeatN", "hold", "untilAny"] },
   "settings": [ /* §6 */ ],
@@ -85,15 +88,14 @@ layouts/
 | Alan | Zorunlu | Açıklama |
 |---|---|---|
 | `schema` | ✔ | Şema sürümü. Şu an `1`. Uyumsuzda yükleme reddedilir. |
-| `id` | ✔ | Benzersiz, küçük harf, `[a-z0-9-]`. Dosya adıyla aynı olmalı. |
+| `id` | ✔ | Benzersiz, küçük harf, `[a-z0-9-]`. Klasör adıyla aynı olmalı. |
 | `name` | ✔ | Kullanıcıya görünen ad. `i18n` anahtarı da olabilir (`"@model.f75"`). |
-| `family` | ✔ | `protocols/` altındaki dosya adı: `g5kb`, `aula04`, `aa`, `mouse55`, `incott`, `yxt`, `evision`, `hfd`, `bytetech`, `xsyd`, `oem1ca5`, `hubmouse`, `i8`. |
 | `kind` | ✔ | `keyboard` \| `mouse`. Hangi sekme setinin açılacağını belirler. |
 | `status` | ✔ | `verified` (donanımda test edildi) \| `experimental` \| `exploring` (salt-okunur). |
 | `usb` | ✔ | Aday bağlantılar. Boş olamaz. |
-| `probe` | ✔ | Kimlik doğrulama. `status: verified` ise `strong` olmalı. |
+| `probe` | ✔ | Kimlik doğrulama; beklenen cevap `accept` listesinde. |
 | `caps` | ✔ | Yetenek sözlüğü. |
-| `layout` | keyboard ✔ | Yerleşim dosyası yolu. |
+| `layout` | keyboard ✔ | Yerleşim dosyası. Klasör içinde `layout.json`. |
 | `matrix` | keyboard ✔ | `len` = tuş matrisi giriş sayısı (4 byte/giriş). |
 | `light` | `caps.lighting` ✔ | Efekt tablosu + sınırlar. |
 | `perKey` | `caps.perKey` ✔ | `leds` = adreslenebilir LED sayısı. |
@@ -102,8 +104,12 @@ layouts/
 | `battery` | `caps.battery` ✔ | `level`, `charging` bayrakları. |
 | `specs` | — | Yalnız gösterim; Dashboard'daki künye. |
 | `notes` | — | Tek satır uyarı; arayüzde bilgi ikonu olarak görünür. |
+| `source` | ✔ | Bu sürücünün uyarlandığı depo ve lisans. Örn. `{"repo":"paulcoding810/open-aula","license":"none","file":"web/PROTOCOL.md"}`. |
 
 Bilinmeyen üst düzey alan **reddedilir** (yazım hatası sessizce yutulmasın).
+
+`family` alanı yoktur. Sürücüler arasında paylaşılan bir aile kavramı yok — her model
+kendi `driver.js`'ini taşır.
 
 ---
 
@@ -129,32 +135,20 @@ VID:PID **tek başına kanıt değildir**; yalnızca aday üretir. Kesin seçim 
 
 ### probe
 
-Kimlik doğrulama, manifest'te bildirilir; çözme kodu ailede.
+Kimlik doğrulama: beklenen cevap bildirimde, çözme kodu `driver.js`'te.
 
 ```json
-"probe": { "op": "identify", "accept": ["0300000000cd"], "strong": true }
+"probe": { "accept": ["0300000000cd"] }
 ```
 
 | Alan | Açıklama |
 |---|---|
-| `op` | Ailenin dışa açtığı kimlik fonksiyonu. Çoğunda `identify`. |
-| `accept` | Fonksiyonun döndürebileceği değerler. Biri eşleşirse model bu. |
-| `strong` | `true` → eşleşmezse bu manifest kesinlikle reddedilir. `false` → diğer adaylara geçilir. |
-| `fallback` | `true` → kimlik okunamadıysa (cihaz cevap vermiyor) salt-okunur modda bu manifest kullanılır. `strong` ile birlikte kullanılamaz. |
+| `accept` | `driver.js`'in `identify()` fonksiyonunun döndürebileceği değerler. Biri eşleşirse bu model seçilir. |
+| `fallback` | `true` → kimlik okunamadıysa (cihaz cevap vermiyor) salt-okunur modda bu sürücü kullanılır. |
 
-Ailelerin `identify` dönüşleri:
-
-| Aile | Dönüş | Örnek |
-|---|---|---|
-| `g5kb` | 6-byte parola, bitişik onaltılı | `"0300000000cd"` |
-| `aula04` | ürün adından çıkarılan anahtar | `"s75"`, `"l99"` |
-| `aa` | cihaz bilgisi baytlarından anahtar | `"2711"` |
-| `bytetech` | 6-byte UUID, bitişik onaltılı | `"110000000003"` |
-| `xsyd` | VID:PID eşi | `"1ca2:1901"` |
-| `evision` | configId → model anahtarı | `"v9pro"` |
-| `hfd` | cihazın bildirdiği VID:PID | `"38a6:2729"` |
-| `incott` | kimlik yanıtı baytları | `"0c02f0f0"` |
-| diğerleri | ürün adı | `"AULA SC620"` |
+`accept` değeri ne olacağını `driver.js`'in `identify()`'ı belirler; biçim serbest metin.
+Örnek: g5kb sürücüleri 6-byte parolayı bitişik onaltılı döner (`"0300000000cd"`), evision
+sürücüleri configId anahtarını (`"v9pro"`), sonix sürücüleri ürün adı anahtarını (`"s75"`).
 
 Kanıtlanmamış bir değeri `accept`'e yazmak yanlış modele yazma riski doğurur. Emin değilsen
 `status: "exploring"` kullan: cihaz tanınır, yazma kilitli kalır.
@@ -165,7 +159,7 @@ Kanıtlanmamış bir değeri `accept`'e yazmak yanlış modele yazma riski doğu
 
 Kapalı liste. Yeni anahtar eklemek kod değişikliği gerektirir (bilinçli).
 
-| Anahtar | Anlamı | Manifest bölümü | Açtığı arayüz |
+| Anahtar | Anlamı | Bildirim bölümü | Açtığı arayüz |
 |---|---|---|---|
 | `lighting` | Efekt tabanlı arka ışık | `light` | Lighting sekmesi: efekt galerisi |
 | `perKey` | LED başına renk | `perKey` | Lighting → Per-key fırçası |
@@ -257,7 +251,8 @@ Etiketler Türkçeleştirme için JSON'a gömülmez.
 
 ## 7. Yerleşim dosyası
 
-`layouts/*.json` — bir veya daha çok modelin paylaştığı tuş haritası.
+`models/<id>/layout.json` — yalnız o modelin tuş haritası. Paylaşılmaz; iki modelin haritası
+aynıysa iki dosyaya aynı içerik yazılır.
 
 ```json
 {
@@ -317,54 +312,56 @@ Bir alt anahtar yoksa o kontrol gösterilmez. `"sensor": { "lod": [] }` → LOD 
 
 ## 9. Doğrulama kuralları
 
-Uygulama her manifesti yüklemeden önce doğrular. Hata → manifest yüklenmez, günlüğe yazılır,
-cihaz "tanınmıyor" görünür. **Doğrulamadan geçmemiş manifest ile cihaza yazılmaz.**
+Uygulama her bildirimi yüklemeden önce doğrular. Hata → bildirim yüklenmez, günlüğe yazılır,
+cihaz "tanınmıyor" görünür. **Doğrulamadan geçmemiş bildirimle cihaza yazılmaz.**
 
 | # | Kural |
 |---|---|
 | 1 | `schema` desteklenen sürüm olmalı. |
 | 2 | Bilinmeyen üst düzey anahtar yok. |
-| 3 | `id` dosya adıyla aynı, `[a-z0-9-]+`. |
-| 4 | `family` `protocols/` altında var. |
+| 3 | `id` klasör adıyla aynı, `[a-z0-9-]+`. |
+| 4 | `driver.js` aynı klasörde var ve `identify()` dışa açıyor. |
 | 5 | `usb` boş değil; `vid`/`pid` 4 haneli onaltılı. |
 | 6 | Her `caps: true` için ilgili bölüm var; her bölüm için `caps: true`. |
-| 7 | `light.modes` içinde `off` var; `hw` değerleri tekil. |
-| 8 | `perKey.leds` > 0; layout'taki tüm `light` bundan küçük. |
-| 9 | `matrix.len` > 0; layout'taki tüm `idx` bundan küçük. |
-| 10 | `layout` yolu `layouts/` altında; `..` yok. |
-| 11 | `dpi.defaults` uzunluğu `stages`'a eşit; `min < max`, `step > 0`. |
-| 12 | `probe.accept` boş değil. |
-| 13 | `status: verified` ise `probe.strong: true`. |
-| 14 | Aynı `vid:pid:role` birden çok manifestte `strong` probe ile talep edilemez — biri `fallback`, biri `strong` olmalı ya da VID:PID'ler ayrılmalı. |
+| 7 | Her `caps: true` için `driver.js`'te karşılık gelen fonksiyon var. |
+| 8 | `light.modes` içinde `off` var; `hw` değerleri tekil. |
+| 9 | `perKey.leds` > 0; `layout.json`'daki tüm `light` bundan küçük. |
+| 10 | `matrix.len` > 0; `layout.json`'daki tüm `idx` bundan küçük. |
+| 11 | `layout` yolu klasör içinde (`layout.json`); `..` yok. |
+| 12 | `dpi.defaults` uzunluğu `stages`'a eşit; `min < max`, `step > 0`. |
+| 13 | `probe.accept` boş değil. |
+| 14 | Aynı `vid:pid:role` taşıyan iki sürücünün `accept` listeleri kesişmez; kesişiyorsa biri `fallback` işaretli olmalı. |
+| 15 | `source.repo` ve `source.license` dolu. |
 
-Doğrulayıcı `core/manifest.js` içinde, ~150 satır, bağımlılıksız. Testleri gerçek manifestleri
-ve bozuk örnekleri (`tests/fixtures/bad-manifests/`) koşar.
+Doğrulayıcı `core/driver.js` içinde, ~150 satır, bağımlılıksız. Testleri gerçek bildirimleri
+ve bozuk örnekleri (`tests/fixtures/bad-drivers/`) koşar.
 
 ---
 
 ## 10. Yeni model ekleme akışı
 
-Senin tarif ettiğin süreç, adım adım:
-
 ### 1. Kaynağı bul
-Cihazın hangi ailede olduğunu belirle. Aile biliniyorsa gerisi veri toplama.
+Kalıcı bir "aile" katmanı yok; ama birçok model aynı firmware ailesinden çıkar, o yüzden
+başlangıç noktası genelde aynı repolardır. Her model için o modelin sürücüsü ayrıca okunur.
 
-| Aile | Bakılacak repo | Ne alınır |
+| Benzer model | Bakılacak repo | Ne alınır |
 |---|---|---|
-| `g5kb` | open-aula `PROTOCOL.md`, AulaSofwareLinux `KB.ini` | 6-byte parola, tuş/LED sayısı, efekt tablosu |
-| `aula04` | open-aula `PROTOCOL.md`, parsiya/f108-pro | ürün adı, ayar byte'ları, efekt listesi |
-| `bytetech` | shizunavn/OpenAula `hub-aulacn-protocol.md` | UUID, tuş yerleşimi, AP/RT sınırları |
-| `evision` | shDavlatbek/aulaar `PROTOCOL.md` | configId, 128-byte blok alanları |
-| … | `protocols/<aile>.js` başındaki kaynak notu | aynı ailenin diğer modelleri |
+| F75 türevi | open-aula `PROTOCOL.md`, AulaSofwareLinux `KB.ini` | 6-byte parola, tuş/LED sayısı, efekt tablosu |
+| S75 Pro türevi | open-aula `PROTOCOL.md`, parsiya/f108-pro | ürün adı, ayar byte'ları, efekt listesi |
+| HERO/WIN HE türevi | shizunavn/OpenAula `hub-aulacn-protocol.md` | UUID, tuş yerleşimi, AP/RT sınırları |
+| V9/X9 türevi | shDavlatbek/aulaar `PROTOCOL.md` | configId, 128-byte blok alanları |
+| … | modelin `driver.js` başındaki kaynak notu | yakın modellerin klasörleri |
 
-### 2. Manifest'i yaz
-`models/keyboards/<id>.json`. Var olan bir modeli kopyala, kimlik ve sınırları değiştir.
+### 2. Klasörü aç
+`models/<id>/`. Üç dosya: `driver.json`, `driver.js`, `layout.json`.
+Yakın bir modelin dosyalarını **başlangıç noktası** olarak kopyala, sonra o modelin farklarını
+yaz. Kopyalamak "paylaşmak" değildir: kopyadan sonra iki model bağımsızdır.
 
 ### 3. Doğrula
 ```bash
-node --test tests/manifest.test.js
+node --test tests/driver.test.js tests/<id>.test.js
 ```
-Şema, çapraz referanslar ve yerleşim sınırları kontrol edilir.
+Şema, çapraz referanslar, `caps` ↔ fonksiyon eşleşmesi ve yerleşim sınırları kontrol edilir.
 
 ### 4. Simülatörde dene
 `?sim=<id>` ile aç. Arayüz doğru sekmeleri açıyor mu, yanlış alan görünüyor mu?
@@ -374,11 +371,12 @@ Cihaz takılıysa Log sekmesinde kimlik cevabı `accept` değerlerinden biriyle 
 Eşleşiyorsa ışık → tuş → makro sırasıyla dene, `docs/HARDWARE-TEST.md`'yi işaretle.
 
 ### 6. Durumu yükselt
-Test geçtiyse `status: "verified"` + `probe.strong: true`. Geçmediyse `experimental` kalır,
-`notes` alanına neyin çalışmadığı yazılır.
+Test geçtiyse `status: "verified"`. Geçmediyse `experimental` kalır, `notes` alanına neyin
+çalışmadığı yazılır.
 
-**Kod değişikliği gerekmez.** Yeni aile ise `protocols/<family>.js` yazılır (bir kez, o ailedeki
-tüm modeller için).
+**Ortak katmana dokunulmaz.** Yeni model ne kadar benzerse benzesin, mevcut bir sürücünün
+`driver.js`'i değişmez. Bir hata birden çok modelde varsa her birinde ayrı düzeltilir —
+ortak soyutlama yok, kopya kabul.
 
 ---
 
@@ -391,19 +389,19 @@ tüm modeller için).
   "schema": 1,
   "id": "f75",
   "name": "AULA F75",
-  "family": "g5kb",
   "kind": "keyboard",
   "status": "verified",
   "usb": [
     { "vid": "258a", "pid": "010c", "role": "usb",    "usagePage": 65280 },
     { "vid": "3554", "pid": "fa09", "role": "dongle", "usagePage": 65280 }
   ],
-  "probe": { "op": "identify", "accept": ["0300000000cd", "030000000000e1"], "strong": true },
+  "probe": { "accept": ["0300000000cd", "030000000000e1"] },
+  "source": { "repo": "paulcoding810/open-aula", "license": "none", "file": "web/PROTOCOL.md" },
   "caps": {
     "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
     "macros": true, "settings": true, "battery": true, "readBack": true
   },
-  "layout": "layouts/f75.json",
+  "layout": "layout.json",
   "matrix": { "len": 128 },
   "light": {
     "brightness": { "max": 9, "default": 5 },
@@ -451,18 +449,21 @@ tüm modeller için).
 
 ## 12. Sürümleme
 
-- `schema` artınca eski manifestler reddedilir; geçiş betiği yazılmaz (az sayıda dosya, elle düzeltilir).
-- Profiller `manifest.id` + `light.modes[].id` saklar. Firmware değeri (`hw`) değişse bile
-  kullanıcı profili çalışmaya devam eder. Bu yüzden `id` alanları **yeniden adlandırılmaz**;
+- `schema` artınca eski bildirimler reddedilir; geçiş betiği yazılmaz (az sayıda dosya, elle düzeltilir).
+- Profiller `driver.json`'un `id`'si + `light.modes[].id` saklar. Firmware değeri (`hw`) değişse
+  bile kullanıcı profili çalışmaya devam eder. Bu yüzden `id` alanları **yeniden adlandırılmaz**;
   yeni efekt eklenirse yeni `id` verilir.
-- Manifest'te `version` alanı yoktur: git geçmişi yeterli.
+- Bildirimde `version` alanı yoktur: git geçmişi yeterli.
+- Bir modelin `driver.js`'i değişince yalnız o modelin testleri koşar; diğerleri etkilenmez.
 
 ---
 
 ## 13. Bilinçli sınırlar
 
-1. Manifest **hangi işlemlerin sırasını** tanımlamaz. Yazma dizileri ailede.
-2. Manifest **yeni bir çerçeve biçimi** tanımlamaz. Farklı çerçeve = yeni aile.
-3. Manifest **hesaplama** yapmaz (koşul, formül, değişken). Sabit veri.
-4. Manifest **görsel düzen** tanımlamaz; yalnızca hangi kontrolün görüneceğini söyler
+1. Bildirim **hangi işlemlerin sırasını** tanımlamaz. Yazma dizileri `driver.js`'te.
+2. Bildirim **çerçeve biçimini** tanımlamaz. Farklı model = farklı `driver.js`.
+3. Bildirim **hesaplama** yapmaz (koşul, formül, değişken). Sabit veri.
+4. Bildirim **görsel düzen** tanımlamaz; yalnızca hangi kontrolün görüneceğini söyler
    (`caps` + bölümün varlığı). Yerleşim `styles/` + `app/views/` içinde bir kez.
+5. Bildirim **başka bir sürücüye referans vermez**. Her klasör kendi kendine yeterli; bir
+   modeli silmek diğerini bozmaz.

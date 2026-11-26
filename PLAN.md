@@ -6,7 +6,7 @@ Tek sekmede model tanıma, ışık, tuş atama, makro, DPI, ekran, profil ve pak
 > Resmî AULA ürünü değildir. AULA markası ve ürün adları sahiplerine aittir.
 > Protokol bilgisi geri mühendislikle elde edilmiştir; kullanım riski kullanıcıya aittir.
 
-Protokol bilgisi kaynaktan izlenir: her aile modülünün başında uyarlanabilir kaynak depo ve
+Protokol bilgisi kaynaktan izlenir: her modelin `driver.js` başında uyarlanabilir kaynak depo ve
 lisans notu bulunur; ayrı bir protokol belgesi tutulmaz.
 
 ---
@@ -17,8 +17,8 @@ lisans notu bulunur; ayrı bir protokol belgesi tutulmaz.
 2. [Kararlar](#2-kararlar)
 3. [Destek matrisi](#3-destek-matrisi)
 4. [Mimari](#4-mimari)
-5. [Modül sözleşmeleri](#5-modül-sözleşmeleri)
-6. [Manifest kataloğu](#6-manifest-kataloğu) → [docs/SCHEMA.md](docs/SCHEMA.md)
+5. [Sürücü sözleşmeleri](#5-sürücü-sözleşmeleri)
+6. [Sürücü kataloğu](#6-sürücü-kataloğu) → [docs/SCHEMA.md](docs/SCHEMA.md)
 7. [Arayüz](#7-arayüz)
 8. [Tasarım sistemi](#8-tasarım-sistemi)
 9. [Güvenlik modeli](#9-güvenlik-modeli)
@@ -54,11 +54,19 @@ ait sekmeleri açar. Ayar değişikliği cihazın kendi hafızasına yazılır; 
 | Günlük/paket görünürlüğü | Yok | Var |
 | Desteklenmeyen model | Yok | "Tanındı, deneysel" etiketiyle açılır |
 
-### Model bilgisi nerede durur
-Her cihazın özellikleri, yetenekleri, efekt tablosu, tuş yerleşimi ve sınırları tek bir
-**JSON manifest** dosyasında. Uygulama cihazı tanıdıktan sonra arayüzü o dosyaya göre kurar.
-Model başına arayüz kodu yoktur — bu projenin ayırt edici tasarım kararı.
-Şema: [docs/SCHEMA.md](docs/SCHEMA.md)
+### Her model kendi sürücüsü
+AULA her model için ayrı bir sürücü yayınlıyor; bu proje de öyle davranır. Model sayısı kadar
+sürücü vardır, hiçbiri diğerinin yerine geçmez. Aynı VID:PID'yi paylaşan modeller (ör.
+`258A:010C` üzerinde 8 klavye) birbirine karışmaz: her sürücü önce **kendi kimlik sorgusunu**
+yapar, eşleşmezse o modelde durmaz.
+
+Bir modelin sürücüsü = `models/<model>/driver.json` (bildirim) + `models/<model>/driver.js`
+(kimlik, komut kodlayıcıları, okuma-yazma akışı). `driver.json` taşıdığı alanları beyan eder;
+`driver.js` yalnızca o modelin protokolünü uygular. Var olan bir sürücüyü başka modele
+"uyarlamak" diye bir şey yoktur — yeni model, yeni dosya.
+
+Ortak olan tek şey, arayüzün sürücü bildirimini nasıl okuduğu ve cihaz taşımasının (WebHID)
+nasıl yapıldığıdır. Şema: [docs/SCHEMA.md](docs/SCHEMA.md)
 
 ### Kapsam dışı (bilinçli)
 - **Firmware güncelleme.** Hiçbir kaynakta geri alınabilir güvenli yol yok.
@@ -86,40 +94,48 @@ Model başına arayüz kodu yoktur — bu projenin ayırt edici tasarım kararı
 ## 3. Destek matrisi
 
 Durum: **V** donanımda doğrulanmış · **C** sürücü kodundan çıkarılmış · **?** protokol eksik.
-Bayt düzenleri `protocols/<aile>.js` dosyalarının başında, kaynak depo ve lisans notuyla birlikte.
+Her satır bir sürücü klasörüdür: `models/<id>/`. Bayt düzeni o klasörün `driver.js` başında,
+kaynak depo ve lisans notuyla birlikte.
 
-### Klavyeler — 24 model, 6 protokol
+### Klavyeler — 24 sürücü
 
-| Model | Protokol | Kablo / dongle | Durum | Öne çıkan |
+| Model (`models/…`) | Kaynak | Kablo / dongle | Durum | Öne çıkan |
 |---|---|---|---|---|
-| F75 · F75 Pro | g5kb | 258A:010C / 3554:FA09 | **V** | 18 efekt, per-key, makro |
-| F87 · F87 Pro | g5kb | aynı | C | 87 tuş |
-| F99 · F99 Pro | g5kb | aynı | C | 96% düzen |
-| F108 · H108 | g5kb | aynı | C | tam boy |
-| F87 Pro (sonix) | aa | 38A6:271x / 0C45:FEFC | C | 7×7 LED matris |
-| S75 Pro | aula04 | 0C45:800A / 0C45:FEFE, 05AC:024F | **V** | 19 efekt, TFT 135×240, yan ışık |
-| L99 | aula04 | 0C45:800A / 05AC:024F | C | 84 tuş, TFT 320×480 |
-| F108 Pro | aula04 | 0C45:800A / 05AC:024F | C | 20 efekt, 3 ışık bölgesi |
-| F75 Max | aula04 | 0C45:800A / 05AC:024F | C | **yaz-only**, 20 efekt |
-| F98 Pro · F98X · S99 Pro | aula04? | 0C45:800A | ? | salt-okunur keşif |
-| S98 Pro | ? | 0C45:800A | ? | önce snif |
-| F2088 | i8 | ? | C | yalnız ışık |
-| F75 HE | hfd | 38A6:2729 / 0C45:FEFE | C | manyetik, per-key |
-| HERO 68 · 84 · 75 · 99 · 87 HE | bytetech | 372E:103E / 372E:1000, 106C | HERO68/84 **V** | AP/RT, SOCD, DKS |
-| HERO 68 HE ULTRA · PRO | oem1ca5 | 1CA5:0407 / 0409 | C | report ID 3 |
-| WIN 68 HE MAX | xsyd | 1CA2:1901, 1C4F:EE88 | **V** | µm birimi, 4 slot |
-| AG60 · AG75 · NEOS 75 · MINI 60HE · WIN60HE · HERO75HE | bytetech? | 372E / hub | ? | kimlik sorgusuyla teyit |
+| `f75` | open-aula | 258A:010C / 3554:FA09 | **V** | 18 efekt, per-key, makro |
+| `f75pro` | open-aula | aynı | C | kimlik parolası farklı |
+| `f87` | open-aula | aynı | C | 87 tuş |
+| `f87pro` | open-aula | aynı | C | 87 tuş |
+| `f99` | AulaSofwareLinux | aynı | C | 96% düzen |
+| `f99pro` | AulaSofwareLinux | aynı | C | 96% düzen |
+| `f108` | AulaSofwareLinux | aynı | C | tam boy |
+| `h108` | AulaSofwareLinux | aynı | C | tam boy |
+| `f87pro-sonix` | open-aula | 38A6:271x / 0C45:FEFC | C | 7×7 LED matris |
+| `s75pro` | open-aula | 0C45:800A / 0C45:FEFE, 05AC:024F | **V** | 19 efekt, TFT 135×240, yan ışık |
+| `l99` | AulaToolkit | 0C45:800A / 05AC:024F | C | 84 tuş, TFT 320×480 |
+| `f108pro` | parsiya/f108-pro | 0C45:800A / 05AC:024F | C | 20 efekt, 3 ışık bölgesi |
+| `f75max` | FaizAsta | 0C45:800A / 05AC:024F | C | **yaz-only** |
+| `f98pro` · `s99pro` | — | 0C45:800A | ? | salt-okunur keşif |
+| `s98pro` | — | 0C45:800A | ? | önce snif |
+| `f2088` | Dahuum | ? | C | yalnız ışık |
+| `f75he` | FaizAsta | 38A6:2729 / 0C45:FEFE | C | manyetik, per-key |
+| `hero68he` | shizunavn/OpenAula | 372E:103E / 372E:1000, 106C | **V** | AP/RT, SOCD, DKS |
+| `hero84he` | shizunavn/OpenAula | aynı | **V** | aynı çerçeve |
+| `hero75he` · `hero99he` | shizunavn/OpenAula | aynı | C | kendi UUID'leri |
+| `hero68ultra` | OpenAula | 1CA5:0407 | C | report ID 3 |
+| `win68hemax` | OpenAula | 1CA2:1901, 1C4F:EE88 | **V** | µm birimi, 4 slot |
+| `ag60` · `ag75` · `neos75` · `mini60he` · `win60he` | hub | 372E / hub | ? | kimlik sorgusuyla teyit |
 
-### Fareler — 12 model, 5 protokol
+### Fareler — 12 sürücü
 
-| Model | Protokol | USB ID | Durum |
+| Model (`models/…`) | Kaynak | USB ID | Durum |
 |---|---|---|---|
-| SC620 | mouse55 | A8A4:2255 / A8A5:2255 | buton haritası **V** |
-| SC900 · SC900 Pro (+ 3 varyant) | incott | 093A / 248A / 379A | **V** |
-| SC390 | yxt | 32C2:0024 | C |
-| V9 / V9+ / Pro / Pro+ / Ultra / Max, X9 ailesi + 8K dongle | evision | 320F:22xx | C |
-| SC800 Max · L9 · V3 Ultra B · X5 Ultra | hubmouse | 38A6:28FC/28FE/2F09 | C (kısmi) |
-| SC580 · 580 X · S12 Pro · KUNLUN X5 | ? | ? | tanınır, sekme kapalı |
+| `sc620` | open-aula | A8A4:2255 / A8A5:2255 | buton haritası **V** |
+| `sc900` | AulaToolkit | 093A / 248A / 379A | **V** |
+| `sc390` | AulaToolkit | 32C2:0024 | C |
+| `v9` | shDavlatbek/aulaar | 320F:22B7/22B8 | C |
+| `x9` | shDavlatbek/aulaar | 320F:22B6 | C |
+| `sc800max` | OpenAula | 38A6:28FC/28FE/2F09 | C (kısmi) |
+| `sc580` · `kunlunx5` | — | ? | tanınır, sekme kapalı |
 
 ### Ortak yetenek bayrakları
 
@@ -151,10 +167,9 @@ readBack   reset    matrix    hall      analog
 ├──────────────────────────────────────────────────────────┤
 │ session.js      bağlı cihaz oturumu: kuyruk, gecikme, retry, durum, olaylar
 ├──────────────────────────────────────────────────────────┤
-│ registry.js     MODEL listesi; VID:PID → adaylar; kimlik çözümü
-│ identity.js     model kapısı (parola / UUID / ürün adı)
+│ registry.js     katalog; VID:PID → aday sürücüler; her adayın identify()'ı
 ├──────────────────────────────────────────────────────────┤
-│ protocols/*.js  SAF kodlayıcı/çözücü: Uint8Array in/out, I/O yok
+│ models/<id>/    driver.json (veri) + driver.js (o modelin protokolü)
 ├──────────────────────────────────────────────────────────┤
 │ transport.js    WebHID sarmalayıcı: request, open, sendFeature, receive, output
 └──────────────────────────────────────────────────────────┘
@@ -186,7 +201,7 @@ AulaBridge/
 ├─ README.md
 ├─ LICENSE
 ├─ docs/
-│  ├─ SCHEMA.md               manifest sözleşmesi
+│  ├─ SCHEMA.md               sürücü bildirimi sözleşmesi
 │  ├─ SUPPORTED.md            model × yetenek tablosu (otomatik üretilir)
 │  └─ HARDWARE-TEST.md        elle doğrulama kontrol listesi
 ├─ styles/
@@ -218,74 +233,99 @@ AulaBridge/
 │     ├─ modal.js   toast.js        deviceStrip.js  keyPreview.js
 ├─ core/
 │  ├─ transport.js
-│  ├─ manifest.js             JSON şema doğrulama + çapraz referans kontrolü
-│  ├─ registry.js             manifest kataloğu → adaylar → probe → model
+│  ├─ driver.js               driver.json şema doğrulama + çapraz referans kontrolü
+│  ├─ registry.js             katalog → aday sürücüler → her adayın identify()'ı
 │  ├─ log.js
 │  ├─ persist.js              localStorage, profil içe/dışa aktarma
-│  └─ sim.js                  simülatör: manifest'i okur, sahte cevap üretir
-├─ protocols/
-│  ├─ util.js
-│  ├─ g5kb.js     aula04.js   aa.js     mouse55.js   incott.js
-│  ├─ yxt.js      evision.js  hfd.js    bytetech.js  xsyd.js
-│  ├─ oem1ca5.js  hubmouse.js i8.js
+│  └─ sim.js                  simülatör: driver.json + driver.js ile sahte cihaz
 ├─ models/
-│  ├─ index.json              katalog: id → dosya, aile, durum
-│  ├─ keyboards/
-│  │  ├─ f75.json  f75pro.json  f87.json  f87pro.json  f99.json  f99pro.json
-│  │  ├─ f108.json h108.json    f87pro-sonix.json
-│  │  ├─ s75pro.json l99.json   f108pro.json f75max.json f98pro.json s99pro.json s98pro.json f2088.json
-│  │  ├─ f75he.json hero68he.json hero84he.json hero75he.json hero99he.json
-│  │  ├─ win68hemax.json hero68ultra.json mini60he.json win60he.json
-│  │  ├─ ag60.json ag75.json neos75.json
-│  └─ mice/
-│     ├─ sc620.json sc900.json sc390.json
-│     ├─ v9.json x9.json sc800max.json sc580.json kunlunx5.json
-├─ layouts/                   tuş yerleşimi; modeller paylaşır
-│  ├─ f75.json f87.json f99.json f108.json
-│  ├─ s75pro.json l99.json f75max.json
-│  └─ hero68.json win68hemax.json …
+│  ├─ index.json              katalog: id → klasör, durum
+│  ├─ f75/
+│  │  ├─ driver.json          USB ID, kimlik, caps, efektler, ayarlar, sınırlar
+│  │  ├─ driver.js            kimlik sorgusu + komut kodlayıcıları + okuma/yazma akışı
+│  │  └─ layout.json          tuş yerleşimi
+│  ├─ f75pro/  f87/  f87pro/  f99/  f99pro/  f108/  h108/
+│  ├─ s75pro/  l99/  f108pro/  f75max/  f98pro/  s99pro/  s98pro/  f2088/
+│  ├─ f75he/  hero68he/  hero84he/  hero75he/  hero99he/
+│  ├─ win68hemax/  hero68ultra/  mini60he/  win60he/  ag60/  ag75/  neos75/
+│  ├─ sc620/  sc900/  sc390/  v9/  x9/  sc800max/  sc580/  kunlunx5/
+│  └─ f87pro-sonix/
+├─ shared/
+│  └─ util.js                 hex, tag(AA55), sum8, chunk — sürücülerin ortak yardımcıları
 ├─ assets/
 │  ├─ devices/                model fotoğrafı (koyu zemin, 3/4 açı)
 │  └─ icons/                  efekt ve işlev ikonları
 ├─ tests/
-│  ├─ g5kb.test.js  aula04.test.js  aa.test.js  mouse55.test.js
-│  ├─ incott.test.js yxt.test.js evision.test.js hfd.test.js
-│  ├─ bytetech.test.js xsyd.test.js
-│  ├─ manifest.test.js        şema + çapraz referans + tüm manifestler
+│  ├─ f75.test.js  s75pro.test.js  hero68he.test.js   sürücü başına bir test
+│  ├─ sc620.test.js  sc900.test.js  …
+│  ├─ driver.test.js          her driver.json doğrulanır; çapraz referanslar; caps ↔ fonksiyon
 │  ├─ registry.test.js i18n.test.js
-│  └─ fixtures/               gerçek paket baytları + bozuk manifest örnekleri
+│  └─ fixtures/               gerçek paket baytları + bozuk bildirim örnekleri
 └─ .github/workflows/pages.yml
 ```
 
 ---
 
-## 5. Modül sözleşmeleri
+## 5. Sürücü sözleşmeleri
 
-### `protocols/*.js` — saf, I/O yok
+Her model kendi sürücüsüne sahiptir: `models/<id>/driver.json` + `models/<id>/driver.js`.
+Aile/paylaşılan protokol katmanı yoktur. İki model aynı firmware'i kullanıyor olsa bile
+birbirinden bağımsız iki dosyadır; birini değiştirmek diğerini etkilemez.
 
-Her modül aynı şekli döndürür:
+### `models/<id>/driver.json`
 
-```js
-export const REPORT_ID = 6;
-export const CAPS = { lighting: true, perKey: true, keymap: true, macros: true };
-
-export const identity     = () => Uint8Array[];         // kimlik okuma paketleri
-export const parseIdentity= (bytes) => 'f75';            // 6-byte → model id | null
-
-export const light        = { write(state), read() };
-export const perKey       = { write(colors), read() };
-export const keymap       = { write(layer, actions), read(layer) };
-export const macros       = { write(list), read() };
-export const settings     = { write(blob), read() };
-export const battery      = { query(), parse(bytes) };
-export const screen       = { upload(frames, slot) };    // opsiyonel
-export const hall         = { readAP(), writeAP(list), readRT(), writeRT(list) };
+```json
+{
+  "schema": 1,
+  "id": "f75",
+  "name": "AULA F75",
+  "kind": "keyboard",
+  "usb": [
+    { "vid": "258a", "pid": "010c", "role": "usb",    "usagePage": 65280 },
+    { "vid": "3554", "pid": "fa09", "role": "dongle", "usagePage": 65280 }
+  ],
+  "probe": { "accept": ["0300000000cd"] },
+  "status": "verified",
+  "caps": { "lighting": true, "perKey": true, "keymap": true, "fnLayer": true,
+            "macros": true, "settings": true, "battery": true, "readBack": true },
+  "matrix": { "len": 128 },
+  "light": { ... },
+  "perKey": { "leds": 90 },
+  "macros": { "maxBytes": 3584, "nameMax": 30, "playModes": ["repeatN", "hold", "untilAny"] },
+  "settings": [ ... ],
+  "battery": { "level": true, "charging": false }
+}
 ```
 
-- Fonksiyonlar **veri üretir**, göndermez. `session` gönderir.
-- Sıralama/gecikme bilgisi modülden gelir: `write()` bir dizi döner, her adım bir paket ya da
-  `{wait: 35}` belirteci olabilir.
-- Tüm okuma fonksiyonları **eksik/bozuk veride `null`** döner; tahmin etmez.
+Şema ve doğrulama kuralları: [docs/SCHEMA.md](docs/SCHEMA.md).
+
+### `models/<id>/driver.js`
+
+Yalnızca o modelin protokolü. Saf kodlayıcı/çözücü; I/O yok — `session` gönderir.
+
+```js
+export const reportId = 6;                       // varsa; bazı sürücülerde aramayla bulunur
+export const identify   = (io) => string | null; // io feature oku/yaz verir; accept ile eşleşir
+export const readLight  = (block) => {...};
+export const writeLight = (state, block) => Uint8Array[];
+export const writePerKey= (colors) => Uint8Array[];
+export const writeKeymap= (layer, actions) => Uint8Array[];
+export const writeMacros= (list) => Uint8Array[];
+export const writeSettings = (values, block) => Uint8Array[];
+export const queryBattery = () => Uint8Array;
+export const parseBattery = (bytes) => number | null;
+```
+
+- Sürücü, `driver.json`'daki `caps`'te `true` olan fonksiyonları **sağlamak zorunda**;
+  olmayanları hiç yazmaz. `driver.test.js` bu eşleşmeyi zorunlu tutar.
+- Fonksiyonlar paket üretir, göndermez. Adım listesinde `{wait: 35}` belirteci olabilir.
+- Okuma fonksiyonları bozuk/eksik veride `null` döner; tahmin etmez.
+- `identify` cihazın cevabını döner; `probe.accept` listesiyle `registry` eşleştirir.
+
+### `shared/util.js`
+
+Tüm sürücülerin ortak yardımcıları: `hex`, `tag(buf, off)` (AA55), `sum8`, `chunk`.
+Protokol mantığı içermez.
 
 ### `transport.js`
 
@@ -336,62 +376,68 @@ on('change' | 'log' | 'error', cb)
 
 ---
 
-## 6. Manifest kataloğu
+## 6. Sürücü kataloğu
 
-Model bilgisinin tamamı JSON'da. Şema ve kurallar ayrı belgede: **[docs/SCHEMA.md](docs/SCHEMA.md)**
+Her model `models/<id>/` klasöründe kendi bildirimi ve kendi koduyla durur. Ayrıntılı şema:
+**[docs/SCHEMA.md](docs/SCHEMA.md)**
 
-### Neyin JSON, neyin kod olduğu
+### Neyin bildirim, neyin sürücü kodu olduğu
 
-| JSON | Kod |
+| `driver.json` (veri) | `driver.js` (o modelin protokolü) |
 |---|---|
-| Model listesi, VID:PID, kimlik baytları | Çerçeve, checksum, komut sırası |
-| Yetenekler, efekt tablosu, tuş yerleşimi | Parçalama/birleştirme |
-| Ayar seçenekleri, sınırlar, pil bayrakları | Oku-değiştir-yaz mantığı |
-| DPI kademeleri, yoklama listesi, buton slotları | Arayüz düzeni (tek kez, tüm modeller için) |
+| Model adı, VID:PID, kimlik baytları | Kimlik sorgusu paketleri |
+| Yetenekler, efekt tablosu, tuş yerleşimi | Çerçeve, checksum, parçalama |
+| Ayar seçenekleri, sınırlar, pil bayrakları | Komut sırası, oku-değiştir-yaz |
+| DPI kademeleri, yoklama listesi, buton slotları | — |
 
-**Var olan aileye model eklemek = yalnızca JSON.** Yeni aile = 1 protokol dosyası + JSON.
+İkisi de modele ait. **Ortak protokol katmanı yok**: yeni model = yeni klasör
+(`driver.json` + `driver.js` + `layout.json` + test). Aynı firmware'i paylaşan bir model
+eklenirken ilgili kaynak repo okunur, ama kod o modelin klasöründe yazılır.
 
 ### Katalog
 
-`models/index.json` — hangi manifest var, hangi ailede:
+`models/index.json` — hangi sürücü var, hangi durumda:
 
 ```json
 {
   "schema": 1,
   "models": [
-    { "id": "f75", "file": "keyboards/f75.json", "family": "g5kb", "status": "verified" },
-    { "id": "s75pro", "file": "keyboards/s75pro.json", "family": "aula04", "status": "verified" }
+    { "id": "f75",   "status": "verified",     "dir": "f75" },
+    { "id": "s75pro","status": "verified",     "dir": "s75pro" },
+    { "id": "sc580", "status": "exploring",    "dir": "sc580" }
   ]
 }
 ```
 
-Uygulama açılışta yalnızca kataloğu indirir. Cihaz bağlanınca o VID:PID'ye uyan manifestleri
-tembel yükler — 36 dosyayı baştan indirmez.
+Uygulama açılışta yalnızca kataloğu indirir. Cihaz bağlanınca o VID:PID'ye uyan sürücüleri
+tembel yükler — 36 klasörü baştan indirmez.
 
 ### Çözüm sırası (`registry.js`)
 
 ```
 1. Cihazın tüm HID koleksiyonlarını topla (aynı VID:PID altında birden çok olabilir)
-2. Katalogdan bu VID:PID'ye uyan manifestleri yükle ve doğrula (§SCHEMA 9)
+2. Katalogdan bu VID:PID'ye uyan sürücüleri yükle ve doğrula (§SCHEMA 9)
 3. Aday yoksa            → "tanınmıyor" kartı, hiçbir yazma yok
-4. Aday tekse            → probe çalıştır; strong + eşleşti → bağlan
-5. Aday birden çoksa     → her adayın probe'unu sırayla dene (aile identify fonksiyonu):
-      g5kb     → 6-byte parola          evision  → configId
-      bytetech → 0x82 UUID              hfd/xsyd → cihazın bildirdiği VID:PID
-      aula04   → ürün adı               incott   → kimlik baytları
-6. Kimlik çözüldü        → manifest yüklendi, sekmeler caps'ten üretilir
-7. Çözülemedi            → fallback işaretli manifest varsa SALT OKUNABİLİR aç:
+4. Aday tekse            → o sürücünün identify() fonksiyonunu çağır;
+                            dönen değer probe.accept ile eşleşirse bağlan, yoksa "tanınmıyor"
+5. Aday birden çoksa     → her adayın KENDİ identify() fonksiyonu sırayla denenir:
+                            258A:010C → 8 sürücü, her biri kendi parolasını bekler
+                            0C45:800A → 7 sürücü, her biri kendi cevabını bekler
+                            eşleşen model bağlanır, diğerleri reddedilir
+6. Kimlik çözüldü        → driver.json yüklendi, sekmeler caps'ten üretilir
+7. Çözülemedi            → fallback işaretli sürücü varsa SALT OKUNABİLİR aç:
                             sekmeler görünür, yazma düğmeleri kilitli
                             Yoksa "tanınmıyor"
 ```
 
 Kimlik okuması **her bağlantıda** yapılır, önbelleğe alınmaz. USB portu değişebilir.
+Aynı VID:PID'deki her sürücü **farklı** `probe.accept` taşımak zorunda (`driver.test.js`).
 
-### Manifest'in sürdüğü şeyler
+### Bildirimin sürdüğü şeyler
 
-Manifest değişince arayüz değişir; view koduna dokunulmaz:
+`driver.json` değişince arayüz değişir; view koduna dokunulmaz:
 
-| Manifest | Arayüzde karşılığı |
+| `driver.json` | Arayüzde karşılığı |
 |---|---|
 | `caps.lighting` | Lighting sekmesi açılır |
 | `caps.perKey` | Per-key fırçası görünür |
@@ -420,8 +466,9 @@ Manifest değişince arayüz değişir; view koduna dokunulmaz:
 | `38A6:271x` | F87 Pro sonix varyantları |
 | `38A6:2729` | F75 HE (kablo) |
 
-Aynı VID:PID altındaki her manifest **farklı `accept` değeri** taşımalı; `manifest.test.js`
-bunu zorunlu kılar (bkz. SCHEMA §9 kural 14).
+Aynı VID:PID altındaki her sürücü **farklı `probe.accept` değeri** taşımalı; `driver.test.js`
+bunu zorunlu kılar (bkz. SCHEMA §9 kural 14). İki sürücü aynı cevabı bekliyorsa yanlış
+modelin yazması riski var — test bunu yakalar.
 
 ---
 
@@ -597,8 +644,9 @@ Yanlış yazma cihazı bozabilir (genelde sürücüyle düzeltilebilir, garanti 
 4. **Sıfırlama ayrı onay.** Fabrika sıfırlama, `confirm` ile iki adım ister.
 5. **Yazma sonrası doğrulama** (`readBack: true` ise). Doğrulama başarısızsa kullanıcı uyarılır,
    eski değer tekrar yazılmaz (kullanıcı karar verir).
-6. **`SAFE` komut listesi.** Her protokol yalnızca beyaz listedeki komutları üretebilir;
-   reset/firmware/test komutları modülde hiç bulunmaz.
+6. **Her sürücü yalnız kendi işlevlerini üretir.** `driver.js` fabrika sıfırlama, firmware
+   veya test komutu içermez; sıfırlama gerekiyorsa ayrı ve açık isimli bir fonksiyondur,
+   arayüzde iki adım onay ister.
 7. **Tek sahip.** Bağlantı açıkken başka program erişemez; hata mesajı bunu açıklar.
 
 ---
@@ -621,18 +669,18 @@ Anahtar grupları: `app.*`, `nav.*`, `dash.*`, `lighting.*`, `keys.*`, `macros.*
 ### Birim testleri (`node --test`)
 | Dosya | Ne doğrular |
 |---|---|
-| `g5kb.test.js` | 520-byte başlık, parça bölme, tuş kodlama, LED bloğu read-modify-write, makro olay kodlama |
-| `aula04.test.js` | 64-byte komut, `AA55` etiketi, 9 paketlik tuş/per-key bloğu, makro `count` formülü, ekran başlığı ve RGB565, 32-byte dongle checksum |
-| `aa.test.js` | `AA cmd len …` başlığı, yankı bekleme sırası, offset'li blok okuma |
-| `mouse55.test.js` | `55 cmd flag chk …` checksum, parametre bloğu 46 byte, buton girişi kodlama |
-| `incott.test.js` | 9-byte çerçeve, alt-komut yankısı, yoklama tablosu, LOD eşlemesi |
-| `yxt.test.js` | nibble maskesi, bölüm 0x40 byte 14 bit alanları |
-| `evision.test.js` | report ID 4, blok transferi, configId → model, 128-byte blok offset'leri |
-| `hfd.test.js` | 5 komutluk beyaz liste (başka komut üretilemez), kimlik doğrulama |
-| `bytetech.test.js` | 63-byte payload başlığı, `cmd\|0x80`, 56-byte veri, birim dönüşümü (mm → 0.01 mm) |
-| `xsyd.test.js` | `0x5C` çerçevesi, `CK` formülü, **iki istisna** (`OP<0x80` → CK 0, `OP=0x30` → `frame[63]`), µm birimi |
-| **`manifest.test.js`** | **Depodaki tüm manifestler**: 14 kural (SCHEMA §9), `index.json` ile çift yönlü eşleşme, layout'ta `idx`/`light` sınırları, paylaşılan VID:PID'de tekil `accept`; bozuk örnekler reddediliyor |
-| `registry.test.js` | Paylaşılan VID:PID'lerde aday listesi doğru; probe sırası; `fallback` yalnız kimlik okunamayınca; bilinmeyen ID'de boş |
+| `f75.test.js` | 520-byte başlık, parça bölme, tuş kodlama, LED bloğu read-modify-write, makro olay kodlama, `identify()` → `0300000000cd` |
+| `s75pro.test.js` | 64-byte komut, `AA55` etiketi, 9 paketlik tuş/per-key bloğu, makro `count` formülü, ekran başlığı ve RGB565, 32-byte dongle checksum |
+| `f87pro-sonix.test.js` | `AA cmd len …` başlığı, yankı bekleme sırası, offset'li blok okuma |
+| `sc620.test.js` | `55 cmd flag chk …` checksum, parametre bloğu 46 byte, buton girişi kodlama |
+| `sc900.test.js` | 9-byte çerçeve, alt-komut yankısı, yoklama tablosu, LOD eşlemesi |
+| `sc390.test.js` | nibble maskesi, bölüm 0x40 byte 14 bit alanları |
+| `v9.test.js` | report ID 4, blok transferi, configId → model, 128-byte blok offset'leri |
+| `f75he.test.js` | 5 komutluk beyaz liste (başka komut üretilemez), kimlik doğrulama |
+| `hero68he.test.js` | 63-byte payload başlığı, `cmd\|0x80`, 56-byte veri, birim dönüşümü (mm → 0.01 mm) |
+| `win68hemax.test.js` | `0x5C` çerçevesi, `CK` formülü, **iki istisna** (`OP<0x80` → CK 0, `OP=0x30` → `frame[63]`), µm birimi |
+| **`driver.test.js`** | **Depodaki tüm sürücüler**: her `driver.json` 14 kurala uyuyor mu, `caps`'teki her yeteneğin karşılığı `driver.js`'te var mı, layout'ta `idx`/`light` sınırları, paylaşılan VID:PID'de tekil `accept` |
+| `registry.test.js` | Paylaşılan VID:PID'lerde aday listesi doğru; her adayın kendi `identify()`'ı sırayla; `fallback` yalnız kimlik okunamayınca; bilinmeyen ID'de boş |
 | `i18n.test.js` | Tüm diller `en.json` ile aynı anahtar kümesinde |
 | `tabs.test.js` | `caps` → beklenen sekme seti; eksik bölüm → sekme yok; `exploring` → tüm yazma kilitli |
 
@@ -640,7 +688,7 @@ Fixture'lar kaynaklardaki gerçek kaptür baytlarından gelir; "benim kodum kend
 değil, "satıcının paketiyle aynı baytı üretsin" test edilir.
 
 ### Elle donanım testi
-`docs/HARDWARE-TEST.md` — her aile için:
+`docs/HARDWARE-TEST.md` — her model için:
 ```
 [ ] Cihaz tanındı, doğru model adı göründü
 [ ] Işık efekti değişti ve cihazda görüldü
@@ -660,7 +708,7 @@ değil, "satıcının paketiyle aynı baytı üretsin" test edilir.
 
 Her fazın sonunda **çalışan, yayınlanabilir site** var. Süre tahminleri tek geliştirici içindir.
 
-### Faz 0 — İskelet + manifest motoru
+### Faz 0 — İskelet + sürücü motoru
 **Süre:** 3–4 gün · **Bağımlılık:** yok
 
 | # | İş | Kabul ölçütü |
@@ -669,116 +717,119 @@ Her fazın sonunda **çalışan, yayınlanabilir site** var. Süre tahminleri te
 | 0.2 | `store.js` + subscribe + localStorage | Yenilemede ui tercihleri korunuyor |
 | 0.3 | Hash router, sekme iskeletleri | Sekmeler gezilebiliyor |
 | 0.4 | `i18n` + `en.json` + `tr.json` | Dil değişiyor, test geçiyor |
-| 0.5 | **`manifest.js`**: şema + 14 çapraz kural | Geçerli manifestler yükleniyor, `tests/fixtures/bad-manifests/` hepsi reddediliyor |
-| 0.6 | **`models/index.json`** katalog + tembel yükleme | Katalog → manifest → doğrula zinciri çalışıyor |
-| 0.7 | **Sekmelerin manifest'ten üretilmesi** | Aynı sitede iki farklı manifest → iki farklı sekme seti, view koduna dokunmadan |
+| 0.5 | **`core/driver.js`**: `driver.json` şema doğrulaması + 14 çapraz kural | Geçerli bildirimler yükleniyor, `tests/fixtures/bad-drivers/` hepsi reddediliyor |
+| 0.6 | **`models/index.json`** katalog + tembel yükleme | Katalog → klasör → `driver.json` + `driver.js` zinciri çalışıyor |
+| 0.7 | **Sekmelerin `driver.json`'dan üretilmesi** | Aynı sitede iki farklı sürücü → iki farklı sekme seti, view koduna dokunmadan |
 | 0.8 | `transport.js` — istek, aç, feature oku/yaz, zaman aşımı | Simülatörle uçtan uca |
-| 0.9 | `registry.js` — aday listesi, probe sırası, salt-okunur yedek | Paylaşılan VID:PID'de doğru manifest |
-| 0.10 | `sim.js` — manifest'i okuyup sahte cihaz üretir | Donanımsız her manifest gezilebiliyor, demo hiç yazmıyor |
+| 0.9 | `registry.js` — aday listesi, her adayın `identify()`'ı sırayla, salt-okunur yedek | Paylaşılan VID:PID'de doğru sürücü seçiliyor |
+| 0.10 | `sim.js` — `driver.json` + `driver.js` ile sahte cihaz | Donanımsız her sürücü gezilebiliyor, demo hiç yazmıyor |
 | 0.11 | `log.js` + Log sekmesi | Her çağrı hex olarak görünüyor, indirilebiliyor |
 | 0.12 | Dashboard + boş durumlar | "Connect" akışı çalışıyor |
 | 0.13 | `tests/` koşucusu + CI + Pages | `node --test` yeşil, site yayında |
 
-**Faz 0 çıkışı:** İki örnek manifest (`f75.json`, `sc620.json`) elle yazılır. Tarayıcıda `?sim=f75`
-açıldığında Lighting/Keys/Macros sekmeleri, `?sim=sc620` açıldığında Mouse sekmesi görünür —
-arayüz kodu tek, davranış manifest'ten. F75 takılıysa Connect → Log'da `06 82 01 00 …` →
-cevap `03 00 00 00 00 cd`; katalogdan `f75.json` seçilir.
+**Faz 0 çıkışı:** İki örnek sürücü elle yazılır: `models/f75/` (klavye) ve `models/sc620/` (fare).
+Tarayıcıda `?sim=f75` açıldığında Lighting/Keys/Macros sekmeleri, `?sim=sc620` açıldığında
+Mouse sekmesi görünür — arayüz kodu tek, davranış sürücü bildiriminden.
+F75 takılıysa Connect → Log'da `06 82 01 00 …` → cevap `03 00 00 00 00 cd`;
+`f75` sürücüsü seçilir, `f87`/`f99`/… reddedilir.
 
-### Faz 1 — g5kb (F75 ailesi)
-**Süre:** 5–7 gün · **Bağımlılık:** Faz 0
+### Faz 1 — klavyeler, tek tek sürücüler
+**Süre:** 6–9 gün · **Bağımlılık:** Faz 0
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
-| 1.1 | `protocols/g5kb.js`: kimlik, başlık, parçalama, `read`/`write` | Birim testleri fixture ile eşleşiyor |
-| 1.2 | `identify()` → 6-byte parola; `probe.accept` ile eşleşme | Her parola doğru manifest'e çözülüyor |
+| 1.1 | `models/f75/`: kimlik, başlık, parçalama, okuma/yazma | Birim testleri fixture ile eşleşiyor |
+| 1.2 | `identify()` → 6-byte parola → `driver.json`'daki `accept` | F75 takılınca yalnız `f75` sürücüsü seçiliyor |
 | 1.3 | LED bloğu read-modify-write; `light.modes[].hw` eşlemesi | Parlaklık 1 artır → yalnız 1 byte değişiyor |
-| 1.4 | Işık sekmesi manifest'ten: efektler, renk/hız/yön görünürlüğü | Cihazda efekt değişiyor; `color:false` efektte renk gizli |
+| 1.4 | Işık sekmesi bildirimden: efektler, renk/hız/yön görünürlüğü | Cihazda efekt değişiyor; `color:false` efektte renk gizli |
 | 1.5 | Per-key: `perKey.leds` kadar LED, fırça, paletler | 3 tuş boya → cihazda görünüyor |
 | 1.6 | Tuş haritası: base + Fn, atama editörü | 1 tuş ata → test et → geri al |
 | 1.7 | Makrolar: kodlayıcı + editör + `macros.maxBytes` sınırı | 3 adımlık makro çalışıyor; dolunca yazma reddediliyor |
 | 1.8 | Ayarlar: `settings[]` → kontrol üretimi | Yeniden bağlanınca kalıcı |
 | 1.9 | Pil sorgusu (`battery.level`) | Yüzde görünüyor |
-| 1.10 | **8 manifest**: F75, F75 Pro, F87, F87 Pro, F99, F99 Pro, F108, H108 + paylaşılan `layouts/*.json` | 8 model listeleniyor; kod değişmedi |
+| 1.10 | **Aynı sürücü dosyasını 7 modele kopyala ve kimlik değerini değiştir**: f75pro, f87, f87pro, f99, f99pro, f108, h108 — her biri kendi `probe.accept` ile | 8 model listeleniyor; her biri doğru kimlikle eşleşiyor |
 
-**Çıkış:** En az bir fiziksel F75'te ışık + tuş + makro çalışıyor; diğer 7 model "experimental".
-8 manifestin tamamı **yalnızca JSON** ile eklendi — bu, mimarinin asıl sınavı.
+**Çıkış:** En az bir fiziksel F75'te ışık + tuş + makro çalışıyor; `f75` `verified`,
+diğer 7 sürücü `experimental`. Her model kendi klasöründe, kendi `driver.js`'i ile.
 
-### Faz 2 — aula04 (S75 Pro ailesi)
+### Faz 2 — ekranlı klavyeler, tek tek sürücüler
 **Süre:** 7–10 gün · **Bağımlılık:** Faz 1 (bileşenler hazır)
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
-| 2.1 | `protocols/aula04.js`: USB çerçevesi, ack, yazma dizisi | Birim testleri geçiyor |
+| 2.1 | `models/s75pro/`: USB çerçevesi, ack, yazma dizisi | Birim testleri geçiyor |
 | 2.2 | 2.4 GHz çerçevesi + checksum | Dongle üzerinden ışık değişiyor |
 | 2.3 | Işık: 19 efekt, yön, yan ışık | S75 Pro'da doğrulandı |
 | 2.4 | Per-key: 9×64 blok, oku/yaz | Gerçek renkler okunup geri yazılıyor |
-| 2.5 | Tuş + Fn, aula04 kodlaması (g5kb'den farklı) | Atama çalışıyor |
+| 2.5 | Tuş + Fn | Atama çalışıyor |
 | 2.6 | Makrolar (`count` formülü, `AA55` sonu) | Çalışıyor |
-| 2.7 | Ayarlar + model farkları (L99 byte kayması) | Her modelde doğru byte |
+| 2.7 | Ayarlar | Cihazda kalıcı |
 | 2.8 | Saat senkronu (`caps.clock`) | Cihaz ekranında doğru saat |
-| 2.9 | **Ekran sekmesi**: `screen.width/height` manifest'ten → kırpma + GIF → RGB565 → 4096'lık parçalar | S75 Pro'da GIF oynuyor; L99'da 320×480 oranı otomatik |
-| 2.10 | `readBack:false` yolu (F75 Max) | UI "doğrulandı" demiyor |
-| 2.11 | F98 Pro / S99 Pro / S98 Pro: `status:"exploring"`, salt-okunur | Log'da anlamlı cevap var mı not edildi |
-| 2.12 | **5 manifest**: S75 Pro, L99, F108 Pro, F75 Max, F98 Pro (+ S99/S98 taslak) | Yalnız JSON; 5 model, tek protokol dosyası |
+| 2.9 | **Ekran sekmesi**: `screen.width/height` bildirimden → kırpma + GIF → RGB565 → 4096'lık parçalar | S75 Pro'da GIF oynuyor |
+| 2.10 | `models/l99/`: aynı akış, ayar byte'ları kaymış (4/3/2), ekran 320×480 | Kendi `driver.js`'i; S75 Pro dosyasına dokunulmadı |
+| 2.11 | `models/f108pro/`: 20 efekt, 3 ışık bölgesi | Kendi dosyası |
+| 2.12 | `models/f75max/`: `readBack:false`, yaz-only | UI "doğrulandı" demiyor |
+| 2.13 | `models/f98pro/`, `models/s99pro/`, `models/s98pro/`: `status:"exploring"` | Salt-okunur; Log'da anlamlı cevap var mı not edildi |
 
-**Çıkış:** S75 Pro tam (ekran dahil), L99/F108 Pro experimental, F75 Max yaz-only — hepsi JSON farkı.
+**Çıkış:** S75 Pro tam (ekran dahil) `verified`; diğer 6 sürücü kendi klasöründe, kendi kimlik
+sorgusuyla. Hiçbiri ortak bir "aula04 katmanı" paylaşmıyor.
 
-### Faz 3 — Fareler
+### Faz 3 — fareler, tek tek sürücüler
 **Süre:** 6–8 gün · **Bağımlılık:** Faz 0
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
-| 3.1 | `mouse55.js` (SC620) | DPI, yoklama, buton, pil |
-| 3.2 | `incott.js` (SC900 ailesi) | 6 DPI kademesi, 8K yoklama, sensör |
-| 3.3 | `yxt.js` (SC390) | Yoklama + LOD + anahtarlar |
-| 3.4 | `evision.js` (V9/X9) | `identify()` → configId → manifest |
-| 3.5 | `hubmouse.js` (SC800 vb.) | Tanıma + pil (kısmi) |
-| 3.6 | **Mouse sekmesi tamamen manifest'ten**: `mouse.dpi`, `.polling`, `.sensor`, `.power` | Eksik alt anahtar → o kontrol gizli |
-| 3.7 | Buton slotları `mouse.buttons.slots` → fare görseli | `locked` slotlar düzenlenemez |
-| 3.8 | Fare makroları (mouse55, evision) | 1 makro çalışıyor |
-| 3.9 | **8 manifest**: SC620, SC900, SC390, V9, X9, SC800 Max, SC580, KUNLUN X5 | KUNLUN X5 `status:"exploring"` kalır |
+| 3.1 | `models/sc620/` (modele özel) | DPI, yoklama, buton, pil |
+| 3.2 | `models/sc900/` | 6 DPI kademesi, 8K yoklama, sensör |
+| 3.3 | `models/sc390/` | Yoklama + LOD + anahtarlar |
+| 3.4 | `models/v9/` | `identify()` → configId |
+| 3.5 | `models/x9/` — V9'dan ayrı dosya; X9'da gövde ışığı yok | Kendi `driver.js`'i |
+| 3.6 | `models/sc800max/` | Tanıma + pil (kısmi) |
+| 3.7 | **Mouse sekmesi tamamen bildirimden**: `mouse.dpi`, `.polling`, `.sensor`, `.power` | Eksik alt anahtar → o kontrol gizli |
+| 3.8 | Buton slotları `mouse.buttons.slots` → fare görseli | `locked` slotlar düzenlenemez |
+| 3.9 | `models/sc580/`, `models/kunlunx5/`: `status:"exploring"` | Tanınır, yazma kilitli |
 
-**Çıkış:** SC900 Pro ve SC620 fizikselde doğrulandı; DPI kademe sayısı manifest'ten geliyor.
+**Çıkış:** SC900 ve SC620 fizikselde doğrulandı; her fare kendi sürücü klasöründe.
 
-### Faz 4 — HE / manyetik
+### Faz 4 — HE / manyetik, tek tek sürücüler
 **Süre:** 8–12 gün · **Bağımlılık:** Faz 1–2 · **En riskli faz**
 
 | # | İş | Kabul ölçütü |
 |---|---|---|
-| 4.1 | `bytetech.js`: çerçeve, CRC, `0x82` UUID kimlik | HERO 68 tanınıyor |
+| 4.1 | `models/hero68he/`: çerçeve, CRC, `0x82` UUID kimlik | HERO 68 tanınıyor |
 | 4.2 | Aktüasyon okuma/yazma (11 kayıt/paket) | 1 tuş AP değişiyor |
 | 4.3 | Rapid Trigger + deadzone | Çalışıyor |
 | 4.4 | Canlı Hall telemetrisi | Basınca derinlik grafiği doluyor |
-| 4.5 | HE sekmesi | Tüm kontroller |
-| 4.6 | `xsyd.js` (WIN 68 HE MAX) — µm birimi, `0x5C` | Çerçeve testleri + okuma |
-| 4.7 | `hfd.js` (F75 HE) — beyaz liste | Yalnız 5 komut; okuma çalışıyor |
-| 4.8 | `oem1ca5.js` (HERO 68 ULTRA/PRO) | Tanıma |
-| 4.9 | SOCD / DKS / Mod Tap editörü (bytetech) | Bir senaryo uçtan uca |
-| 4.10 | AG60/AG75/NEOS/MINI/WIN60 kimlik teyidi | bytetech manifesti ile tanındı veya `exploring` |
-| 4.11 | **6 manifest**: F75 HE, HERO 68/84/75/99 HE, WIN 68 HE MAX | `hall` bölümü manifest'ten (birim: 0.01 mm / µm) |
+| 4.5 | HE sekmesi | Tüm kontroller `hall` bölümünden |
+| 4.6 | `models/hero84he/`, `models/hero75he/`, `models/hero99he/`: ayrı dosyalar | Her biri kendi UUID'siyle tanınıyor |
+| 4.7 | `models/win68hemax/` — µm birimi, `0x5C` çerçevesi | Çerçeve testleri + okuma |
+| 4.8 | `models/f75he/` — beyaz liste | Yalnız 5 komut; okuma çalışıyor |
+| 4.9 | `models/hero68ultra/` — report ID 3 | Tanıma |
+| 4.10 | SOCD / DKS / Mod Tap editörü (HERO 68) | Bir senaryo uçtan uca |
+| 4.11 | `models/ag60/`, `ag75/`, `neos75/`, `mini60he/`, `win60he/`: kimlik teyidi | Tanındı veya `exploring` |
 
-**Çıkış:** HERO 68/84 ve WIN 68 HE MAX doğrulandı; F75 HE experimental.
-Aktüasyon birimi manifest'te (`"unit": "0.01mm"`), kodda sabit değil.
+**Çıkış:** HERO 68/84 ve WIN 68 HE MAX `verified`; F75 HE `experimental`.
+Aktüasyon birimi her sürücünün bildiriminde (`"unit": "0.01mm"` / `"1um"`), paylaşılan sabit yok.
 
 ### Faz 5 — Derinlik
 **Süre:** 5–8 gün
 
 - Ekran editörü: kırpma arayüzü, kare kare gezinme, önizleme, kare gecikmesi.
-- Profil yönetimi: kopyala, model dönüştürme, paylaşım bağlantısı (sıkıştırılmış JSON, URL fragment).
+- Profil yönetimi: kopyala, paylaşım bağlantısı (sıkıştırılmış JSON, URL fragment).
 - Pil geçmişi (oturum içi, kalıcı değil).
-- Ritim/müzik senkronu — yalnız `aula04` `0x20` canlı per-key'e sahip modeller.
+- Ritim/müzik senkronu — yalnız canlı per-key akışı olan sürücülerde.
 - Tanılama paketi: log + ortam + model, cihaz verisi içermez.
-- **Topluluk manifestleri**: kullanıcı kendi JSON'unu yükleyip dener (yerel, doğrulanmış,
-  `status:"user"` etiketiyle, paylaşılamaz). Yeni model eklemenin kod gerektirmediğini kanıtlar.
+- **Sürücü karşılaştırma aracı**: iki sürücünün `driver.js`'ini yan yana koyup farkı göster
+  (kopyala-türet sırasında sürüklenmeyi yakalar). Yeni model eklemenin maliyetini düşürür.
 
 ### Faz 6 — Cila ve yayın
 **Süre:** 3–5 gün
 
 - Erişilebilirlik denetimi (klavye, kontrast, ekran okuyucu).
 - Linux udev sayfası: hazır kuralı kopyalat, "nasıl uygulanır" adımları.
-- README + ekran görüntüleri + **`docs/SUPPORTED.md` manifest kataloğundan üretilir**
+- README + ekran görüntüleri + **`docs/SUPPORTED.md` katalogdan üretilir**
   (`node tools/gen-support.js` → tablo, elle yazılmaz).
-- GitHub Pages, ilk etiket (`v0.1.0`), katkı rehberi (nasıl manifest yazılır → SCHEMA.md).
+- GitHub Pages, ilk etiket (`v0.1.0`), katkı rehberi (nasıl sürücü yazılır → SCHEMA.md).
 
 ### Toplam
 | Faz | Süre |
@@ -803,16 +854,17 @@ Aktüasyon birimi manifest'te (`"unit": "0.01mm"`), kodda sabit değil.
 | 3 | Resmî sürücü açık | Bağlantı başarısız | "Diğer programı kapat" adımları; `exclusive` hatası yakalanır |
 | 4 | Yanlış model tanıma | Bozuk ayar | Kimlik zorunlu, salt-okunur yedek, oku-değiştir-yaz, imza kontrolü |
 | 5 | Yaz-only modeller (F75 Max) | Doğrulama yok | UI "gönderildi" der, "doğrulandı" demez |
-| 6 | HE ailesi 4 alt protokol | Yanlış komut zararsız ama boşa deneme | Kimlik cevabı yoksa hiçbir şey yazılmaz |
-| 7 | Protokol hatası donanımda ancak görülür | Sessiz yanlış davranış | Her aile için ayrı doğrulama listesi; C durumu kullanıcıya açık |
+| 6 | HE klavyeleri 4 farklı çerçeve kullanıyor | Yanlış komut zararsız ama boşa deneme | Her sürücü kendi kimliğini bekler; eşleşmezse hiçbir şey yazılmaz |
+| 7 | Protokol hatası donanımda ancak görülür | Sessiz yanlış davranış | Her model için ayrı doğrulama listesi; durum kullanıcıya açık |
 | 8 | Cihaz yazma sırasında çıkar | Yarım ayar | Kuyruk temizlenir; sonraki bağlantıda yeniden okunur; "kısmi yazıldı" loglanır |
 | 9 | Tarayıcı sekmesi arka planda | Zamanlayıcı kısılır, gecikmeler kayar | `setTimeout` yerine paket başına ack beklenir; uzun işlemlerde `Worker` |
 | 10 | Firma protokolü değiştirir | Model çalışmaz | Sürüm/firmware alanı gösterilir; "bilinmeyen davranış" raporlanabilir |
 | 11 | Lisans uyumu | Proje yayınlanamaz | Kaynak başına lisans notu; GPL-3 seçildi; satıcı binary'si depoya girmez |
 | 12 | Kapsam şişmesi | Bitmez | Fazlar dondurulmuş; kapsam dışı listesi planda sabit |
-| 13 | JSON'un programlama diline dönüşmesi | Bakımı imkânsız "config DSL" | Manifest saf veri; koşul/döngü/formül yasak (SCHEMA §13). Karmaşık davranış koda, koda 1 kez |
-| 14 | Manifest hatası yanlış modele yazar | Bozuk ayar | Doğrulama zorunlu, `verified` için `probe.strong`, paylaşılan VID:PID'de tekil `accept` (SCHEMA §9) |
-| 15 | 36 manifestin bakımı | Tutarsız model listesi | `manifest.test.js` hepsini doğrular; `SUPPORTED.md` katalogdan üretilir |
+| 13 | Bildirimin programlama diline dönüşmesi | Bakımı imkânsız "config DSL" | `driver.json` saf veri; koşul/döngü/formül yasak (SCHEMA §13). Karmaşık davranış `driver.js`'e |
+| 14 | Bildirim hatası yanlış modele yazar | Bozuk ayar | Doğrulama zorunlu, paylaşılan VID:PID'de tekil `accept`, `verified` için fiziksel test (SCHEMA §9) |
+| 15 | 36 sürücü arasında kopyala-türet sürüklenmesi | Bir modelde düzeltilen hata diğerinde kalır; sessiz tutarsızlık | Her model kendi testini taşır; Faz 5'te sürücü karşılaştırma aracı; ortak `shared/util.js` yalnız yardımcı |
+| 16 | 36 sürücü bildiriminin bakımı | Tutarsız model listesi | `driver.test.js` hepsini doğrular; `SUPPORTED.md` katalogdan üretilir |
 
 ---
 
@@ -836,15 +888,18 @@ Bunlar yanıtlanmadan ilgili faz tamamlanamaz:
 ## 15. Çalışma kuralları
 
 - **Build yok, bağımlılık yok.** Yeni paket eklemek gerekçe ister.
-- **Protokol modülleri saf.** I/O, DOM, `window` yok; testleri donanımsız koşar.
-- **Her yeni protokol kodu bir testle gelir.** Fixture kaynaktan alınır.
+- **Sürücü modülleri saf.** I/O, DOM, `window` yok; testleri donanımsız koşar.
+- **Her sürücü kendi dosyası.** Bir model için düzeltme yaparken başka modelin `driver.js`'i
+  değişmez. Ortak kod yalnızca `shared/util.js` ve `core/` katmanıdır.
+- **Her yeni sürücü kodu bir testle gelir.** Fixture kaynaktan alınır.
 - **Bilinmeyen byte korunur.** "Şimdilik sıfırlayalım" yasak.
 - **Hata mesajı kullanıcı dilinde**, eylem içerir.
 - **Türkçe açıklama, İngilizce kod.** Tanımlayıcılar ve yorumlar İngilizce; README/PLAN Türkçe.
-- **Manifest değişikliği kod değişikliği değildir.** Yeni model PR'ı yalnızca `.json` + layout içerir.
-- **Manifest'e mantık sızmaz.** Koşul, formül, değişken, şablon yok. İhtiyaç doğarsa önce
-  şemada yeni bir *veri* alanı olarak düşünülür; olmuyorsa aile kodu büyür (bir kez, tüm modeller için).
-- **Commit:** tek konu, çalışan durum. `feat(protocol):`, `fix(g5kb):`, `feat(model):`, `docs:`.
+- **Bildirim değişikliği ile sürücü kodu ayrı commit.** `driver.json`'da yanlış bir efekt değeri
+  kodu ilgilendirmez; `driver.js`'te bir çerçeve düzeltmesi bildirimi ilgilendirmez.
+- **Bildirime mantık sızmaz.** Koşul, formül, değişken, şablon yok. İhtiyaç doğarsa önce
+  şemada yeni bir *veri* alanı olarak düşünülür; olmuyorsa o modelin `driver.js`'i büyür.
+- **Commit:** tek konu, çalışan durum. `feat(driver):`, `fix(f75):`, `feat(model):`, `docs:`.
 
 ---
 
@@ -853,11 +908,13 @@ Bunlar yanıtlanmadan ilgili faz tamamlanamaz:
 Faz 0.1–0.7 sırayla:
 
 1. Kabuk, tema token'ları, router, i18n (0.1–0.4).
-2. **`core/manifest.js` doğrulayıcı** + `tests/manifest.test.js` (0.5) — 14 kural, bozuk örnek fixture'ları.
-3. **`models/index.json`** + iki örnek manifest: `f75.json` (klavye) ve `sc620.json` (fare) (0.6).
-4. **Sekmelerin manifest'ten üretilmesi** (0.7) — `?sim=f75` ile Lighting/Keys/Macros,
+2. **`core/driver.js` doğrulayıcı** + `tests/driver.test.js` (0.5) — 14 kural, bozuk örnek fixture'ları.
+3. **`models/index.json`** + iki örnek sürücü: `models/f75/` (klavye) ve `models/sc620/` (fare) (0.6).
+4. **Sekmelerin `driver.json`'dan üretilmesi** (0.7) — `?sim=f75` ile Lighting/Keys/Macros,
    `?sim=sc620` ile Mouse. Aynı view kodu, iki farklı arayüz.
 
-0.7 bittiğinde mimarinin asıl iddiası kanıtlanmış olur: **model davranışı JSON'da, arayüz tek**.
+0.7 bittiğinde mimarinin asıl iddiası kanıtlanmış olur: **her modelin davranışı kendi
+klasöründe, arayüz tek**.
 Ondan sonra transport (0.8), registry (0.9), simülatör (0.10), log (0.11), dashboard (0.12).
-F75 takılıysa 0.9'da kimlik okuması `03 00 00 00 00 cd` döndüğü an temel doğrulanmış olur.
+F75 takılıysa 0.9'da `models/f75/driver.js`'in kimlik sorgusu `03 00 00 00 00 cd` döndüğü an
+temel doğrulanmış olur; `f87`, `f99` ve diğer adaylar reddedilir.

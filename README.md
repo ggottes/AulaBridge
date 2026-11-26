@@ -19,7 +19,7 @@ Early development. The plan and protocol notes are complete; the application is 
 | Document | Contents |
 | --- | --- |
 | [PLAN.md](PLAN.md) | Scope, architecture, UI, security model, phases, risks |
-| [docs/SCHEMA.md](docs/SCHEMA.md) | JSON manifest contract — how a model is described |
+| [docs/SCHEMA.md](docs/SCHEMA.md) | Driver contract — how each model describes itself |
 | [docs/SUPPORTED.md](docs/SUPPORTED.md) | Model × feature matrix |
 | [docs/HARDWARE-TEST.md](docs/HARDWARE-TEST.md) | Manual verification checklist |
 
@@ -27,20 +27,36 @@ Early development. The plan and protocol notes are complete; the application is 
 
 ## Coverage
 
-Six keyboard protocol families and five mouse families, covering roughly 36 models.
+Roughly 36 models. Each one is its own driver: its own USB IDs, its own identity check,
+its own command set. Sharing a VID:PID with another model is common — identity decides,
+never the USB ID alone.
 
-| Family | Models | Hardware status |
-| --- | --- | --- |
-| `g5kb` | F75, F75 Pro, F87, F87 Pro, F99, F99 Pro, F108, H108 | F75 verified |
-| `aula04` | S75 Pro, L99, F108 Pro, F75 Max, F98 Pro, S98 Pro, S99 Pro | S75 Pro verified |
-| `aa` | F87 Pro (Sonix variant) | vendor code |
-| `hfd` | F75 HE | vendor code |
-| `bytetech` | HERO 68/84/75/99/87 HE, WIN68HE Ultra, MINI 60HE | HERO 68/84 verified |
-| `xsyd` | WIN 68 HE MAX | verified |
-| `mouse55` · `incott` · `yxt` · `evision` · `hubmouse` | SC620, SC900 family, SC390, V9/X9 family, SC800 Max | SC900 Pro verified |
+| Model | Wired | Receiver | Hardware status | Documented by |
+| --- | --- | --- | --- | --- |
+| F75 | 258A:010C | 3554:FA09 | verified | open-aula, AulaSofwareLinux |
+| F75 Pro | 258A:010C | 3554:FA09 | vendor code | open-aula, AulaSofwareLinux |
+| F87 | 258A:010C | 3554:FA09 | vendor code | open-aula, AulaSofwareLinux |
+| F87 Pro | 258A:010C | 3554:FA09 | vendor code | open-aula, AulaSofwareLinux |
+| F99 | 258A:010C | 3554:FA09 | vendor code | AulaSofwareLinux |
+| F99 Pro | 258A:010C | 3554:FA09 | vendor code | AulaSofwareLinux |
+| F108 | 258A:010C | 3554:FA09 | vendor code | AulaSofwareLinux |
+| H108 | 258A:010C | 3554:FA09 | vendor code | AulaSofwareLinux |
+| S75 Pro | 0C45:800A | 0C45:FEFE, 05AC:024F | verified | open-aula |
+| L99 | 0C45:800A | 05AC:024F | vendor code | AulaToolkit |
+| F108 Pro | 0C45:800A | 05AC:024F | vendor code | parsiya/f108-pro |
+| F75 Max | 0C45:800A | 05AC:024F | vendor code (write-only) | FaizAsta/Aula-F75-software |
+| F75 HE | 38A6:2729 | 0C45:FEFE | vendor code | FaizAsta/Aula-F75-software |
+| F87 Pro (Sonix) | 38A6:271x | 0C45:FEFC | vendor code | open-aula |
+| HERO 68 / 84 HE | 372E:103E | 372E:1000, 106C | verified | shizunavn/OpenAula |
+| WIN 68 HE MAX | 1CA2:1901 | — | verified | shizunavn/OpenAula |
+| SC620 | A8A4:2255 | A8A5:2255 | buttons verified | open-aula |
+| SC900 family | 093A / 248A / 379A | same | verified | AulaToolkit |
+| SC390 | 32C2:0024 | — | vendor code | AulaToolkit |
+| V9 / X9 family | 320F:22B6/22B7/22B8 | 320F:22A0 | vendor code | shDavlatbek/aulaar |
 
-Models marked as vendor-code-only are shown with an **Experimental** badge. Writing to them
-is possible but unverified against physical hardware.
+Models without a public protocol are listed but stay read-only, and the app says so.
+Models marked *vendor code* show an **Experimental** badge: writing works but has not been
+confirmed on physical hardware.
 
 ### Not supported
 
